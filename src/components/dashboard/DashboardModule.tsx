@@ -785,7 +785,7 @@ export const DashboardModule: React.FC = () => {
                   <img src={log.avatar} alt={log.employeeName} className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
                   <div>
                     <p className="font-semibold text-white truncate max-w-[130px]">{log.employeeName}</p>
-                    <p className="text-[10px] text-neutral-400">{log.gate.split(' ')[0]} Gate</p>
+                    <p className="text-[10px] text-neutral-400">{(log.gate || 'Main').split(' ')[0]} Gate</p>
                   </div>
                 </div>
                 <div className="text-right">

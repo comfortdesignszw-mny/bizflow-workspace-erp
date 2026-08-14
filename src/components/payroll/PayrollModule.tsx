@@ -156,7 +156,7 @@ export const PayrollModule: React.FC = () => {
                 {selectedRun.status === 'paid' && (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/30">
                     <Lock className="w-3.5 h-3.5" />
-                    <span>Snapshot Frozen & Disbursed ({selectedRun.paidAt?.split('T')[0]})</span>
+                    <span>Snapshot Frozen & Disbursed ({selectedRun.paidAt ? selectedRun.paidAt.split('T')[0] : 'Frozen'})</span>
                   </span>
                 )}
               </div>

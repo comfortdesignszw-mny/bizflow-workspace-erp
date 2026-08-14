@@ -359,3 +359,122 @@ export interface CompanySettings {
   defaultTaxRate: number;
   geminiAiEnabled: boolean;
 }
+
+// Procurement & Logistics Types
+export type PurchaseOrderStatus = 'Draft' | 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Cancelled';
+
+export interface PurchaseOrderItem {
+  id: string;
+  name: string;
+  sku: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  poNumber: string; // PO-2026-081
+  vendorId: string;
+  vendorName: string;
+  requestedBy: string;
+  department: string;
+  status: PurchaseOrderStatus;
+  items: PurchaseOrderItem[];
+  totalAmount: number;
+  currency: string;
+  orderDate: string;
+  expectedDelivery: string;
+  actualDelivery?: string;
+  trackingNumber?: string;
+  carrier?: string;
+  notes?: string;
+}
+
+export interface Vendor {
+  id: string;
+  name: string;
+  category: 'Hardware & Cloud' | 'Office & Facilities' | 'Software Licenses' | 'Logistics & Freight' | 'Consulting';
+  contactPerson: string;
+  email: string;
+  phone: string;
+  rating: number; // 1 to 5
+  paymentTerms: string; // Net 30, Net 15
+  status: 'Active' | 'Under Review' | 'Inactive';
+  totalSpend: number;
+}
+
+// Engineering & Systems Types
+export interface Microservice {
+  id: string;
+  name: string;
+  code: string;
+  status: 'Healthy' | 'Degraded' | 'Deploying' | 'Incident';
+  uptimePercent: number;
+  latencyMs: number;
+  version: string;
+  techStack: string[];
+  leadEngineer: string;
+  repository: string;
+  lastDeployed: string;
+}
+
+export interface DeployPipeline {
+  id: string;
+  serviceId: string;
+  serviceName: string;
+  branch: string;
+  commitHash: string;
+  commitMessage: string;
+  author: string;
+  status: 'SUCCESS' | 'RUNNING' | 'FAILED' | 'QUEUED';
+  durationSeconds: number;
+  timestamp: string;
+}
+
+// Sales & CRM Types
+export type DealStage = 'Lead' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
+
+export interface Deal {
+  id: string;
+  title: string;
+  clientCompany: string;
+  contactName: string;
+  contactEmail: string;
+  value: number;
+  currency: string;
+  stage: DealStage;
+  probability: number; // 0-100%
+  ownerName: string;
+  expectedCloseDate: string;
+  tags: string[];
+  lastActivity: string;
+}
+
+export interface ClientAccount {
+  id: string;
+  name: string;
+  industry: string;
+  tier: 'Enterprise' | 'Growth' | 'Mid-Market' | 'Startup';
+  annualRevenue: number;
+  primaryContact: string;
+  email: string;
+  phone: string;
+  status: 'Active' | 'Onboarding' | 'Churn Risk' | 'Prospect';
+  openDealsCount: number;
+  lifetimeValue: number;
+}
+
+// Workplace Notes & Scratchpad Types
+export interface WorkplaceNote {
+  id: string;
+  title: string;
+  category: 'Executive' | 'HR' | 'Engineering' | 'Finance' | 'Procurement' | 'General';
+  content: string;
+  tags: string[];
+  pinned: boolean;
+  authorName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+

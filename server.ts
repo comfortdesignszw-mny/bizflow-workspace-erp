@@ -44,10 +44,16 @@ async function startServer() {
 
   // Helper for generating content with multi-model fallback and error recovery
   async function generateWithFallback(ai: GoogleGenAI, primaryModel: string, configObj: any) {
-    const candidateModels = [primaryModel, 'gemini-3.1-flash-lite', 'gemini-flash-latest'];
+    const candidateModels = [
+      primaryModel,
+      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
+      'gemini-flash-latest',
+    ];
+    const uniqueModels = Array.from(new Set(candidateModels));
     let lastError = null;
 
-    for (const model of candidateModels) {
+    for (const model of uniqueModels) {
       try {
         const res = await ai.models.generateContent({
           ...configObj,
@@ -56,21 +62,11 @@ async function startServer() {
         return res;
       } catch (err: any) {
         lastError = err;
-        console.warn(`Gemini model ${model} failed:`, err?.message || err);
-        // If it's a 503 or 429 error, try next candidate model
-        const isTransientOrQuota = err?.status === 'UNAVAILABLE' || 
-          err?.status === 'RESOURCE_EXHAUSTED' || 
-          err?.message?.includes('503') || 
-          err?.message?.includes('429') ||
-          err?.message?.includes('quota') ||
-          err?.message?.includes('high demand');
-        
-        if (!isTransientOrQuota) {
-          throw err;
-        }
+        const msg = err?.message || String(err);
+        console.warn(`[AI Service] Model ${model} unavailable (${err?.status || '429/Quota/Transient'}): ${msg.slice(0, 120)}... falling back.`);
       }
     }
-    throw lastError;
+    throw lastError || new Error('All Gemini models unavailable or rate limited');
   }
 
   // AI Resume Scoring & ATS Match Analysis Endpoint

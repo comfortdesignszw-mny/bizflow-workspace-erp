@@ -12,6 +12,12 @@ import { InventoryModule } from './components/inventory/InventoryModule';
 import { FinanceModule } from './components/finance/FinanceModule';
 import { ReportsModule } from './components/reports/ReportsModule';
 import { SettingsModule } from './components/settings/SettingsModule';
+import { ProcurementModule } from './components/procurement/ProcurementModule';
+import { EngineeringModule } from './components/engineering/EngineeringModule';
+import { SalesCRMModule } from './components/sales/SalesCRMModule';
+import { TasksModule } from './components/tasks/TasksModule';
+import { CurrencyExchangeModule } from './components/tools/CurrencyExchangeModule';
+import { NotesPadModule } from './components/tools/NotesPadModule';
 import { QRScannerModal } from './components/modals/QRScannerModal';
 import { DigitalBadgeModal } from './components/modals/DigitalBadgeModal';
 import { PayslipModal } from './components/modals/PayslipModal';
@@ -33,14 +39,26 @@ const ERPAppContent: React.FC = () => {
         return <PayrollModule />;
       case 'recruitment':
         return <RecruitmentModule />;
-      case 'projects':
-        return <ProjectsModule />;
-      case 'inventory':
-        return <InventoryModule />;
       case 'finance':
         return <FinanceModule />;
+      case 'procurement':
+        return <ProcurementModule />;
+      case 'projects':
+        return <ProjectsModule />;
+      case 'engineering':
+        return <EngineeringModule />;
+      case 'sales-crm':
+        return <SalesCRMModule />;
+      case 'tasks':
+        return <TasksModule />;
       case 'reports':
         return <ReportsModule />;
+      case 'inventory':
+        return <InventoryModule />;
+      case 'currency-exchange':
+        return <CurrencyExchangeModule />;
+      case 'notes-pad':
+        return <NotesPadModule />;
       case 'settings':
         return <SettingsModule />;
       default:

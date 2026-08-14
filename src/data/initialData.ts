@@ -12,7 +12,14 @@ import {
   Invoice,
   AuditLog,
   CompanySettings,
-  UserPersona
+  UserPersona,
+  PurchaseOrder,
+  Vendor,
+  Microservice,
+  DeployPipeline,
+  Deal,
+  ClientAccount,
+  WorkplaceNote
 } from '../types/erp';
 
 export const INITIAL_PERSONAS: UserPersona[] = [
@@ -1741,3 +1748,391 @@ export const INITIAL_SETTINGS: CompanySettings = {
   defaultTaxRate: 23.0,
   geminiAiEnabled: true
 };
+
+export const INITIAL_VENDORS: Vendor[] = [
+  {
+    id: 'ven-001',
+    name: 'Apex Cloud & Infrastructure Inc.',
+    category: 'Hardware & Cloud',
+    contactPerson: 'Rachel Sterling',
+    email: 'rachel@apexcloud.io',
+    phone: '+1 (555) 302-8819',
+    rating: 4.9,
+    paymentTerms: 'Net 30',
+    status: 'Active',
+    totalSpend: 142000
+  },
+  {
+    id: 'ven-002',
+    name: 'Silicon Valley Biometrics Corp',
+    category: 'Hardware & Cloud',
+    contactPerson: 'Victor Vance',
+    email: 'victor@svbiometrics.com',
+    phone: '+1 (555) 441-2099',
+    rating: 4.8,
+    paymentTerms: 'Net 15',
+    status: 'Active',
+    totalSpend: 56000
+  },
+  {
+    id: 'ven-003',
+    name: 'Nordic Office Logistics & Ergonomics',
+    category: 'Office & Facilities',
+    contactPerson: 'Freja Lindqvist',
+    email: 'freja@nordicfurniture.se',
+    phone: '+1 (555) 912-3301',
+    rating: 4.7,
+    paymentTerms: 'Net 30',
+    status: 'Active',
+    totalSpend: 28400
+  },
+  {
+    id: 'ven-004',
+    name: 'Global Freight & Express Forwarding',
+    category: 'Logistics & Freight',
+    contactPerson: 'Tariq Al-Mansoor',
+    email: 'dispatch@globalfreight.net',
+    phone: '+1 (555) 782-9011',
+    rating: 4.6,
+    paymentTerms: 'Net 15',
+    status: 'Active',
+    totalSpend: 19800
+  }
+];
+
+export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
+  {
+    id: 'po-001',
+    poNumber: 'PO-2026-081',
+    vendorId: 'ven-001',
+    vendorName: 'Apex Cloud & Infrastructure Inc.',
+    requestedBy: 'David Alvarez',
+    department: 'Engineering',
+    status: 'Delivered',
+    items: [
+      { id: 'poi-1', name: 'GPU Cluster Compute Nodes (H100 NVLink)', sku: 'SRV-H100-NODE', quantity: 2, unitPrice: 32000, total: 64000 },
+      { id: 'poi-2', name: 'Managed Kubernetes Ingress Gateway', sku: 'K8S-INGRESS-PRO', quantity: 1, unitPrice: 4200, total: 4200 }
+    ],
+    totalAmount: 68200,
+    currency: 'USD',
+    orderDate: '2026-08-01',
+    expectedDelivery: '2026-08-10',
+    actualDelivery: '2026-08-09',
+    trackingNumber: 'FX-8892019482',
+    carrier: 'FedEx Priority Freight',
+    notes: 'Q3 Machine Learning & Telemetry cluster expansion.'
+  },
+  {
+    id: 'po-002',
+    poNumber: 'PO-2026-082',
+    vendorId: 'ven-002',
+    vendorName: 'Silicon Valley Biometrics Corp',
+    requestedBy: 'Marcus Chen',
+    department: 'Human Resources',
+    status: 'Ordered',
+    items: [
+      { id: 'poi-3', name: 'NFC-v4 Biometric Gate Scanners', sku: 'BIO-NFC-V4', quantity: 4, unitPrice: 1850, total: 7400 },
+      { id: 'poi-4', name: 'Cryptographic QR Badge Printers', sku: 'BADGE-PRT-SEC', quantity: 2, unitPrice: 1200, total: 2400 }
+    ],
+    totalAmount: 9800,
+    currency: 'USD',
+    orderDate: '2026-08-11',
+    expectedDelivery: '2026-08-18',
+    trackingNumber: 'UPS-1Z992A01948',
+    carrier: 'UPS Worldwide Express',
+    notes: 'Access control upgrade for 4th floor R&D labs.'
+  },
+  {
+    id: 'po-003',
+    poNumber: 'PO-2026-083',
+    vendorId: 'ven-003',
+    vendorName: 'Nordic Office Logistics & Ergonomics',
+    requestedBy: 'Eleanor Vance',
+    department: 'Operations',
+    status: 'Requested',
+    items: [
+      { id: 'poi-5', name: 'Ergonomic Motorized Sit-Stand Desks', sku: 'DSK-SIT-STND', quantity: 12, unitPrice: 650, total: 7800 },
+      { id: 'poi-6', name: 'High-Mesh Executive Task Chairs', sku: 'CHR-EXEC-MESH', quantity: 12, unitPrice: 420, total: 5040 }
+    ],
+    totalAmount: 12840,
+    currency: 'USD',
+    orderDate: '2026-08-13',
+    expectedDelivery: '2026-08-25',
+    notes: 'New engineering wing workstation provisioning.'
+  }
+];
+
+export const INITIAL_MICROSERVICES: Microservice[] = [
+  {
+    id: 'srv-001',
+    name: 'Auth & Biometric Gate Ingress',
+    code: 'SVC-AUTH-GATE',
+    status: 'Healthy',
+    uptimePercent: 99.98,
+    latencyMs: 18,
+    version: 'v2.8.4',
+    techStack: ['Go', 'gRPC', 'PostgreSQL', 'Redis'],
+    leadEngineer: 'Amara Okafor',
+    repository: 'github.com/comfortbizflow/auth-gate-ingress',
+    lastDeployed: '2026-08-13 18:42'
+  },
+  {
+    id: 'srv-002',
+    name: 'Payroll Engine & Rollup Streamer',
+    code: 'SVC-PAYROLL-ROLLUP',
+    status: 'Healthy',
+    uptimePercent: 99.95,
+    latencyMs: 34,
+    version: 'v3.1.0',
+    techStack: ['Node.js', 'TypeScript', 'BullMQ', 'PostgreSQL'],
+    leadEngineer: 'Devon Miller',
+    repository: 'github.com/comfortbizflow/payroll-stream-engine',
+    lastDeployed: '2026-08-14 02:15'
+  },
+  {
+    id: 'srv-003',
+    name: 'Gemini AI Executive Telemetry Copilot',
+    code: 'SVC-AI-INTELLIGENCE',
+    status: 'Healthy',
+    uptimePercent: 99.92,
+    latencyMs: 120,
+    version: 'v4.0.2',
+    techStack: ['Python', 'FastAPI', 'Gemini 3.7 Flash', 'Milvus Vector DB'],
+    leadEngineer: 'Amara Okafor',
+    repository: 'github.com/comfortbizflow/ai-telemetry-copilot',
+    lastDeployed: '2026-08-14 04:30'
+  },
+  {
+    id: 'srv-004',
+    name: 'ATS Resume Parser & Match Scoring',
+    code: 'SVC-ATS-MATCH',
+    status: 'Healthy',
+    uptimePercent: 99.89,
+    latencyMs: 85,
+    version: 'v1.9.1',
+    techStack: ['Python', 'LangChain', 'OCR-Tesseract', 'Redis'],
+    leadEngineer: 'Mateo Hernandez',
+    repository: 'github.com/comfortbizflow/ats-candidate-matcher',
+    lastDeployed: '2026-08-12 11:10'
+  }
+];
+
+export const INITIAL_DEPLOY_PIPELINES: DeployPipeline[] = [
+  {
+    id: 'dep-001',
+    serviceId: 'srv-001',
+    serviceName: 'Auth & Biometric Gate Ingress',
+    branch: 'main',
+    commitHash: '7b92f01',
+    commitMessage: 'feat(qr-crypto): enforce SHA-256 rotating badge salt verification',
+    author: 'Amara Okafor',
+    status: 'SUCCESS',
+    durationSeconds: 142,
+    timestamp: '2026-08-13T18:42:00.000Z'
+  },
+  {
+    id: 'dep-002',
+    serviceId: 'srv-002',
+    serviceName: 'Payroll Engine & Rollup Streamer',
+    branch: 'release/v3.1.0',
+    commitHash: '3c81e94',
+    commitMessage: 'fix(tax-brackets): reconcile 2026 federal withholding formulas',
+    author: 'Devon Miller',
+    status: 'SUCCESS',
+    durationSeconds: 98,
+    timestamp: '2026-08-14T02:15:00.000Z'
+  },
+  {
+    id: 'dep-003',
+    serviceId: 'srv-003',
+    serviceName: 'Gemini AI Executive Telemetry Copilot',
+    branch: 'feat/workforce-trends',
+    commitHash: '9a44d12',
+    commitMessage: 'feat: add Recharts KPI synthesis & departmental velocity scoring',
+    author: 'Eleanor Vance',
+    status: 'SUCCESS',
+    durationSeconds: 110,
+    timestamp: '2026-08-14T04:30:00.000Z'
+  }
+];
+
+export const INITIAL_CLIENT_ACCOUNTS: ClientAccount[] = [
+  {
+    id: 'acc-001',
+    name: 'Horizon FinTech International',
+    industry: 'Financial Services & Banking',
+    tier: 'Enterprise',
+    annualRevenue: 4800000,
+    primaryContact: 'Charlotte Moreau',
+    email: 'charlotte@horizonfintech.com',
+    phone: '+1 (555) 789-0123',
+    status: 'Active',
+    openDealsCount: 2,
+    lifetimeValue: 320000
+  },
+  {
+    id: 'acc-002',
+    name: 'Aether Cloud Data Systems',
+    industry: 'Cloud Infrastructure & AI',
+    tier: 'Enterprise',
+    annualRevenue: 12000000,
+    primaryContact: 'Liam O\'Connor',
+    email: 'loconnor@aetherdata.io',
+    phone: '+1 (555) 890-1234',
+    status: 'Active',
+    openDealsCount: 1,
+    lifetimeValue: 480000
+  },
+  {
+    id: 'acc-003',
+    name: 'Veritas BioHealth & Genomics',
+    industry: 'Life Sciences & Healthcare',
+    tier: 'Growth',
+    annualRevenue: 2400000,
+    primaryContact: 'Dr. Sarah Jenkins',
+    email: 'sjenkins@veritasgenomics.org',
+    phone: '+1 (555) 901-2345',
+    status: 'Onboarding',
+    openDealsCount: 1,
+    lifetimeValue: 145000
+  },
+  {
+    id: 'acc-004',
+    name: 'Vanguard Autonomous Robotics',
+    industry: 'Industrial Automation',
+    tier: 'Growth',
+    annualRevenue: 3100000,
+    primaryContact: 'Hiroshi Tanaka',
+    email: 'htanaka@vanguardrobotics.co.jp',
+    phone: '+1 (555) 012-3456',
+    status: 'Prospect',
+    openDealsCount: 1,
+    lifetimeValue: 92000
+  }
+];
+
+export const INITIAL_DEALS: Deal[] = [
+  {
+    id: 'deal-001',
+    title: 'Enterprise Biometric ERP Rollout (1,200 Seats)',
+    clientCompany: 'Horizon FinTech International',
+    contactName: 'Charlotte Moreau',
+    contactEmail: 'charlotte@horizonfintech.com',
+    value: 185000,
+    currency: 'USD',
+    stage: 'Negotiation',
+    probability: 85,
+    ownerName: 'Eleanor Vance',
+    expectedCloseDate: '2026-08-30',
+    tags: ['Enterprise', 'Biometrics', 'Annual Contract'],
+    lastActivity: '2026-08-13: Contract redline review completed by legal'
+  },
+  {
+    id: 'deal-002',
+    title: 'Distributed Cloud Ingress Architecture Modernization',
+    clientCompany: 'Aether Cloud Data Systems',
+    contactName: 'Liam O\'Connor',
+    contactEmail: 'loconnor@aetherdata.io',
+    value: 240000,
+    currency: 'USD',
+    stage: 'Won',
+    probability: 100,
+    ownerName: 'David Alvarez',
+    expectedCloseDate: '2026-08-10',
+    tags: ['Architecture', 'Cloud', 'Engineering'],
+    lastActivity: '2026-08-10: SOW signed and initial $80,000 retainer invoiced'
+  },
+  {
+    id: 'deal-003',
+    title: 'HIPAA-Compliant ATS & People Ops Platform',
+    clientCompany: 'Veritas BioHealth & Genomics',
+    contactName: 'Dr. Sarah Jenkins',
+    contactEmail: 'sjenkins@veritasgenomics.org',
+    value: 95000,
+    currency: 'USD',
+    stage: 'Proposal',
+    probability: 60,
+    ownerName: 'Marcus Chen',
+    expectedCloseDate: '2026-09-15',
+    tags: ['HR Tech', 'Healthcare', 'Compliance'],
+    lastActivity: '2026-08-12: Demo of AI Match Scoring presented to HR committee'
+  },
+  {
+    id: 'deal-004',
+    title: 'Factory Access & QR Attendance Terminal Pilot',
+    clientCompany: 'Vanguard Autonomous Robotics',
+    contactName: 'Hiroshi Tanaka',
+    contactEmail: 'htanaka@vanguardrobotics.co.jp',
+    value: 62000,
+    currency: 'USD',
+    stage: 'Qualified',
+    probability: 40,
+    ownerName: 'Eleanor Vance',
+    expectedCloseDate: '2026-09-30',
+    tags: ['Hardware', 'IoT', 'Pilot'],
+    lastActivity: '2026-08-14: Technical specs sent to facility operations manager'
+  }
+];
+
+export const INITIAL_NOTES: WorkplaceNote[] = [
+  {
+    id: 'note-001',
+    title: 'Q3 Executive Strategy & Capital Allocation Plan',
+    category: 'Executive',
+    content: `# Q3 Executive Strategy & Capital Allocation
+
+## Strategic Priorities
+1. **Workforce Acceleration**: Expand Senior Distributed Systems team to support high-throughput financial ingress workloads.
+2. **Financial Efficiency**: Target maintaining monthly gross payroll burn under $105k while delivering 100% of milestones in PRJ-ENG-01 and PRJ-FIN-02.
+3. **Biometric Security Rollout**: Complete NFC/QR gate installations across 4th-floor R&D labs by August 25.
+
+## Action Items
+- [x] Reconcile August 2026 Draft payroll run with Sophia Patel.
+- [ ] Finalize Horizon FinTech Enterprise contract ($185k ARR).
+- [ ] Review Gemini 3.7 Flash telemetry copilot latency metrics.`,
+    tags: ['Executive', 'Q3 Planning', 'Board'],
+    pinned: true,
+    authorName: 'Eleanor Vance',
+    createdAt: '2026-08-10T09:00:00.000Z',
+    updatedAt: '2026-08-14T05:30:00.000Z'
+  },
+  {
+    id: 'note-002',
+    title: 'Engineering Sprint 34: Microservices & Cryptographic QR Verification',
+    category: 'Engineering',
+    content: `# Sprint 34 Architecture Notes
+
+### Key Architecture Milestones
+- **QR Gateway Protocol**: Implemented SHA-256 HMAC tokens on digital badges with a 60-second rotating window.
+- **Rollup Aggregator**: Real-time worker scans calculate daily late minutes, overtime, and break times automatically at 17:30.
+
+### Team Focus
+- Amara Okafor: Load testing on Redis biometric ingress queues.
+- Mateo Hernandez: Finalizing ATS resume vector embedding pipeline.`,
+    tags: ['Engineering', 'Architecture', 'Sprint 34'],
+    pinned: true,
+    authorName: 'David Alvarez',
+    createdAt: '2026-08-12T14:00:00.000Z',
+    updatedAt: '2026-08-14T03:15:00.000Z'
+  },
+  {
+    id: 'note-003',
+    title: 'HR Guidelines: 2026 Remote & Hybrid Engagement Policy',
+    category: 'HR',
+    content: `# 2026 Workplace & Attendance Policy
+
+### Core Hours
+- Standard shift: **08:30 – 17:30**
+- Grace period for on-time biometric check-in: **10 minutes** (until 08:40).
+- Overtime calculation multiplier: **1.5x hourly base rate**.
+
+### Expense Reimbursements
+- Claims submitted through the Finance portal before the 20th are settled with the monthly payroll run.`,
+    tags: ['HR Policy', 'Operations', 'Compliance'],
+    pinned: false,
+    authorName: 'Marcus Chen',
+    createdAt: '2026-08-08T11:00:00.000Z',
+    updatedAt: '2026-08-11T16:20:00.000Z'
+  }
+];
+

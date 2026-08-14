@@ -346,7 +346,7 @@ export const Header: React.FC = () => {
               />
               <div className="hidden lg:block text-left pr-1">
                 <p className="text-xs font-semibold text-white leading-tight">{currentUser.name}</p>
-                <p className="text-[10px] text-blue-400 font-medium leading-tight">{currentUser.roleTitle.split(' ')[0]} ({currentUser.role})</p>
+                <p className="text-[10px] text-blue-400 font-medium leading-tight">{(currentUser.roleTitle || currentUser.role || 'Staff').split(' ')[0]} ({currentUser.role || 'Staff'})</p>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
             </button>

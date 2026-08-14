@@ -649,7 +649,7 @@ export const ProjectsModule: React.FC = () => {
                           <p className="text-[11px] text-neutral-400 line-clamp-2">{task.description}</p>
 
                           <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-[10px] text-neutral-500">
-                            <span className="text-neutral-300 font-medium">{task.assigneeName.split(' ')[0]}</span>
+                            <span className="text-neutral-300 font-medium">{(task.assigneeName || 'Unassigned').split(' ')[0]}</span>
                             <span className="font-mono">{task.estimatedHours}h est</span>
                           </div>
 

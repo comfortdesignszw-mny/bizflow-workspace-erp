@@ -20,7 +20,16 @@ import {
   CompanySettings,
   ScanType,
   ScanMethod,
-  RecruitmentStage
+  RecruitmentStage,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  Vendor,
+  Microservice,
+  DeployPipeline,
+  Deal,
+  DealStage,
+  ClientAccount,
+  WorkplaceNote
 } from '../types/erp';
 import {
   INITIAL_PERSONAS,
@@ -36,7 +45,14 @@ import {
   INITIAL_EXPENSES,
   INITIAL_INVOICES,
   INITIAL_AUDIT_LOGS,
-  INITIAL_SETTINGS
+  INITIAL_SETTINGS,
+  INITIAL_VENDORS,
+  INITIAL_PURCHASE_ORDERS,
+  INITIAL_MICROSERVICES,
+  INITIAL_DEPLOY_PIPELINES,
+  INITIAL_CLIENT_ACCOUNTS,
+  INITIAL_DEALS,
+  INITIAL_NOTES
 } from '../data/initialData';
 
 interface ERPContextType {
@@ -64,6 +80,13 @@ interface ERPContextType {
   invoices: Invoice[];
   auditLogs: AuditLog[];
   settings: CompanySettings;
+  vendors: Vendor[];
+  purchaseOrders: PurchaseOrder[];
+  microservices: Microservice[];
+  deployPipelines: DeployPipeline[];
+  deals: Deal[];
+  clientAccounts: ClientAccount[];
+  notes: WorkplaceNote[];
 
   // Computed & Live presence
   currentlyInsideEmployees: Employee[];
@@ -118,6 +141,19 @@ interface ERPContextType {
   updateExpenseStatus: (id: string, status: ExpenseClaim['status']) => void;
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => void;
+
+  // Actions: Procurement
+  addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'poNumber' | 'orderDate'>) => PurchaseOrder;
+  updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) => void;
+
+  // Actions: Sales & CRM
+  addDeal: (deal: Omit<Deal, 'id' | 'lastActivity'>) => Deal;
+  updateDealStage: (id: string, stage: DealStage) => void;
+
+  // Actions: Notes & Text Pad
+  addNote: (note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>) => WorkplaceNote;
+  updateNote: (id: string, updates: Partial<WorkplaceNote>) => void;
+  deleteNote: (id: string) => void;
 
   // Actions: Settings & System
   updateSettings: (updates: Partial<CompanySettings>) => void;
@@ -174,6 +210,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => getStored('audit_logs', INITIAL_AUDIT_LOGS));
   const [settings, setSettings] = useState<CompanySettings>(() => getStored('settings', INITIAL_SETTINGS));
 
+  const [vendors, setVendors] = useState<Vendor[]>(() => getStored('vendors', INITIAL_VENDORS));
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => getStored('purchase_orders', INITIAL_PURCHASE_ORDERS));
+  const [microservices, setMicroservices] = useState<Microservice[]>(() => getStored('microservices', INITIAL_MICROSERVICES));
+  const [deployPipelines, setDeployPipelines] = useState<DeployPipeline[]>(() => getStored('deploy_pipelines', INITIAL_DEPLOY_PIPELINES));
+  const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>(() => getStored('client_accounts', INITIAL_CLIENT_ACCOUNTS));
+  const [deals, setDeals] = useState<Deal[]>(() => getStored('deals', INITIAL_DEALS));
+  const [notes, setNotes] = useState<WorkplaceNote[]>(() => getStored('notes', INITIAL_NOTES));
+
   // Modal states
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
@@ -195,6 +239,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { setStored('invoices', invoices); }, [invoices]);
   useEffect(() => { setStored('audit_logs', auditLogs); }, [auditLogs]);
   useEffect(() => { setStored('settings', settings); }, [settings]);
+  useEffect(() => { setStored('vendors', vendors); }, [vendors]);
+  useEffect(() => { setStored('purchase_orders', purchaseOrders); }, [purchaseOrders]);
+  useEffect(() => { setStored('microservices', microservices); }, [microservices]);
+  useEffect(() => { setStored('deploy_pipelines', deployPipelines); }, [deployPipelines]);
+  useEffect(() => { setStored('client_accounts', clientAccounts); }, [clientAccounts]);
+  useEffect(() => { setStored('deals', deals); }, [deals]);
+  useEffect(() => { setStored('notes', notes); }, [notes]);
 
   const hasRole = useCallback((allowedRoles: UserRole[]): boolean => {
     if (currentUser.role === 'ADMIN') return true;
@@ -422,7 +473,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAccessLogs(updatedLogs);
 
     // Derive and update today's rollup
-    const today = timestamp.split('T')[0];
+    const today = (timestamp || new Date().toISOString()).split('T')[0];
     const updatedRollups = computeRollupForDate(today, updatedLogs, employees);
     setAttendanceRollups(prev => {
       const filtered = prev.filter(r => r.date !== today);
@@ -658,7 +709,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const app = applicants.find(a => a.id === applicantId);
     if (!app) return null;
 
-    const names = app.name.split(' ');
+    const names = (app.name || 'New Hire').split(' ');
     const firstName = names[0] || 'New';
     const lastName = names.slice(1).join(' ') || 'Hire';
     const job = jobOpenings.find(j => j.id === app.jobOpeningId);
@@ -925,6 +976,68 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('INVOICE_STATUS_UPDATED', 'Finance & Billing', `Invoice #${id} status set to ${status}.`);
   }, [logAudit]);
 
+  // Procurement & Purchase Orders
+  const addPurchaseOrder = useCallback((po: Omit<PurchaseOrder, 'id' | 'poNumber' | 'orderDate'>): PurchaseOrder => {
+    const count = purchaseOrders.length + 1;
+    const newPO: PurchaseOrder = {
+      ...po,
+      id: `po-${Date.now()}`,
+      poNumber: `PO-2026-0${80 + count}`,
+      orderDate: new Date().toISOString().split('T')[0]
+    };
+    setPurchaseOrders(prev => [newPO, ...prev]);
+    logAudit('PURCHASE_ORDER_CREATED', 'Procurement & Logistics', `Created purchase order ${newPO.poNumber} for $${newPO.totalAmount.toLocaleString()} to ${newPO.vendorName}.`);
+    return newPO;
+  }, [purchaseOrders.length, logAudit]);
+
+  const updatePurchaseOrderStatus = useCallback((id: string, status: PurchaseOrderStatus) => {
+    setPurchaseOrders(prev => prev.map(po => po.id === id ? { ...po, status, actualDelivery: status === 'Delivered' ? new Date().toISOString().split('T')[0] : po.actualDelivery } : po));
+    logAudit('PO_STATUS_CHANGED', 'Procurement & Logistics', `Purchase order #${id} status changed to ${status}.`);
+  }, [logAudit]);
+
+  // Sales & CRM Deals
+  const addDeal = useCallback((deal: Omit<Deal, 'id' | 'lastActivity'>): Deal => {
+    const newDeal: Deal = {
+      ...deal,
+      id: `deal-${Date.now()}`,
+      lastActivity: `${new Date().toISOString().split('T')[0]}: Deal created in CRM pipeline`
+    };
+    setDeals(prev => [newDeal, ...prev]);
+    logAudit('CRM_DEAL_CREATED', 'Sales & CRM', `Created sales opportunity "${newDeal.title}" with value $${newDeal.value.toLocaleString()}.`);
+    return newDeal;
+  }, [logAudit]);
+
+  const updateDealStage = useCallback((id: string, stage: DealStage) => {
+    setDeals(prev => prev.map(d => d.id === id ? {
+      ...d,
+      stage,
+      probability: stage === 'Won' ? 100 : stage === 'Lost' ? 0 : stage === 'Negotiation' ? 85 : stage === 'Proposal' ? 60 : stage === 'Qualified' ? 40 : 20,
+      lastActivity: `${new Date().toISOString().split('T')[0]}: Stage moved to ${stage}`
+    } : d));
+    logAudit('CRM_STAGE_ADVANCED', 'Sales & CRM', `Deal #${id} moved to ${stage} stage.`);
+  }, [logAudit]);
+
+  // Workplace Notes
+  const addNote = useCallback((note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>): WorkplaceNote => {
+    const newNote: WorkplaceNote = {
+      ...note,
+      id: `note-${Date.now()}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setNotes(prev => [newNote, ...prev]);
+    logAudit('NOTE_CREATED', 'Workplace Notes', `Created note "${newNote.title}" in category ${newNote.category}.`);
+    return newNote;
+  }, [logAudit]);
+
+  const updateNote = useCallback((id: string, updates: Partial<WorkplaceNote>) => {
+    setNotes(prev => prev.map(n => n.id === id ? { ...n, ...updates, updatedAt: new Date().toISOString() } : n));
+  }, []);
+
+  const deleteNote = useCallback((id: string) => {
+    setNotes(prev => prev.filter(n => n.id !== id));
+  }, []);
+
   // Settings & Reset
   const updateSettings = useCallback((updates: Partial<CompanySettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -945,6 +1058,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setInvoices(INITIAL_INVOICES);
     setAuditLogs(INITIAL_AUDIT_LOGS);
     setSettings(INITIAL_SETTINGS);
+    setVendors(INITIAL_VENDORS);
+    setPurchaseOrders(INITIAL_PURCHASE_ORDERS);
+    setMicroservices(INITIAL_MICROSERVICES);
+    setDeployPipelines(INITIAL_DEPLOY_PIPELINES);
+    setClientAccounts(INITIAL_CLIENT_ACCOUNTS);
+    setDeals(INITIAL_DEALS);
+    setNotes(INITIAL_NOTES);
     setCurrentUser(INITIAL_PERSONAS[0]);
     localStorage.clear();
     logAudit('SYSTEM_RESET', 'System Admin', 'System database reset to initial demonstration state.', 'WARNING');
@@ -970,6 +1090,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     invoices,
     auditLogs,
     settings,
+    vendors,
+    purchaseOrders,
+    microservices,
+    deployPipelines,
+    deals,
+    clientAccounts,
+    notes,
     currentlyInsideEmployees,
     currentlyInsideCount,
     todayPresentCount,
@@ -1003,6 +1130,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateExpenseStatus,
     addInvoice,
     updateInvoiceStatus,
+    addPurchaseOrder,
+    updatePurchaseOrderStatus,
+    addDeal,
+    updateDealStage,
+    addNote,
+    updateNote,
+    deleteNote,
     updateSettings,
     logAudit,
     resetAllDataToDefault,
