@@ -468,6 +468,55 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     }
   });
 
+  // In-memory online database store for synchronizing offline clients
+  const onlineDatastore: Record<string, any[]> = {};
+
+  // GET collection from online database if missing locally
+  app.get('/api/db/:collection', (req, res) => {
+    const { collection } = req.params;
+    const data = onlineDatastore[collection] || [];
+    res.json({
+      collection,
+      count: data.length,
+      data,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // GET all online database snapshot
+  app.get('/api/db/all', (req, res) => {
+    res.json({
+      database: 'BizFlowOnlineDB',
+      data: onlineDatastore,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // POST sync single collection mutations
+  app.post('/api/db/sync', (req, res) => {
+    const { collection, data } = req.body;
+    if (collection && Array.isArray(data)) {
+      onlineDatastore[collection] = data;
+      return res.json({ success: true, collection, count: data.length, syncedAt: new Date().toISOString() });
+    }
+    res.status(400).json({ error: 'Invalid collection or data payload' });
+  });
+
+  // POST full sync all collections
+  app.post('/api/db/sync-all', (req, res) => {
+    const payload = req.body || {};
+    for (const [key, value] of Object.entries(payload)) {
+      if (Array.isArray(value)) {
+        onlineDatastore[key] = value;
+      }
+    }
+    res.json({
+      success: true,
+      collectionsSynced: Object.keys(payload).length,
+      syncedAt: new Date().toISOString()
+    });
+  });
+
   // Vite middleware in development vs Static files in production
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

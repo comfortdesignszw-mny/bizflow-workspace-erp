@@ -2,17 +2,48 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>BizFlow Workplace ERP</title>
-    <meta name="description" content="An Intergrated workspace of tools for a morden Business flow." />
-    <meta property="og:title" content="BizLow Workforce ERP" />
-    <meta property="og:description" content="An Intergrated workspace of tools for a morden Business flow." />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>BizFlow Enterprise ERP</title>
+    <meta name="description" content="Offline-First Enterprise Resource Planning & Workforce Management Platform" />
+    
+    <!-- PWA Manifest & App Icons -->
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    
+    <!-- PWA Theme Meta -->
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BizFlow ERP" />
+    
+    <!-- Social Sharing -->
+    <meta property="og:title" content="BizFlow Enterprise ERP" />
+    <meta property="og:description" content="Offline-First Enterprise Resource Planning & Workforce Management Platform" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
   </head>
-  <body>
+  <body class="bg-neutral-950 text-neutral-100 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Register Service Worker for Offline-First PWA capabilities
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('[PWA] ServiceWorker registered with scope:', registration.scope);
+            })
+            .catch(err => {
+              console.warn('[PWA] ServiceWorker registration failed:', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
 

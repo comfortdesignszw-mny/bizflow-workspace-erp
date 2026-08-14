@@ -478,3 +478,99 @@ export interface WorkplaceNote {
   updatedAt: string;
 }
 
+// IT Department & Systems Issue Management Types
+export type ITTicketCategory =
+  | 'Hardware'
+  | 'Network & VPN'
+  | 'Network'
+  | 'Access & Security'
+  | 'Software & SaaS'
+  | 'Software/Access'
+  | 'Server & Cloud'
+  | 'Cloud/Server'
+  | 'Security'
+  | 'Email & SSO'
+  | 'Email/Domain'
+  | 'Workstation Setup'
+  | 'Printer/Peripheral'
+  | 'Other'
+  | string;
+
+export type ITTicketPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | 'Critical' | 'High' | 'Medium' | 'Low';
+
+export type ITTicketStatus =
+  | 'Open'
+  | 'Investigating'
+  | 'In Progress'
+  | 'Waiting on User'
+  | 'Resolved'
+  | 'Closed';
+
+export interface ITTicket {
+  id: string;
+  ticketNumber: string;
+  title: string;
+  description: string;
+  category: ITTicketCategory;
+  priority: ITTicketPriority;
+  status: ITTicketStatus;
+  requesterName: string;
+  requesterDepartment: string;
+  requesterEmail: string;
+  assignedEngineer?: string;
+  assignedToEngineer?: string;
+  deviceInfo?: string;
+  affectedAssetTag?: string;
+  createdAt: string;
+  updatedAt: string;
+  resolvedAt?: string;
+  resolutionNotes?: string;
+  slaDeadline?: string;
+  slaTargetHours?: number;
+  ipAddress?: string;
+  tags: string[];
+}
+
+export interface ITSystemHealth {
+  id: string;
+  name: string;
+  category: 'Network' | 'Identity & Auth' | 'Infrastructure' | 'Security' | 'Communication';
+  status: 'Operational' | 'Degraded' | 'Under Maintenance' | 'Critical Incident';
+  uptimePercent: number;
+  latencyMs: number;
+  location: string;
+  lastPing: string;
+  description: string;
+}
+
+export type ITDeviceHealth = 'Healthy' | 'Update Required' | 'Security Alert' | 'Offline';
+
+export interface ITDeviceInventory {
+  id: string;
+  assetTag: string;
+  deviceName: string;
+  brand?: string;
+  model?: string;
+  type: 'MacBook Pro' | 'ThinkPad' | 'Dell Workstation' | 'Firewall Gateway' | 'Cisco Switch' | 'Access Point' | string;
+  serialNumber: string;
+  assignedTo: string;
+  department: string;
+  osVersion: string;
+  ipAddress: string;
+  healthStatus: ITDeviceHealth;
+  warrantyExpiry: string;
+  lastCheckin: string;
+}
+
+export interface ITSoftwareLicense {
+  id: string;
+  softwareName: string;
+  vendor: string;
+  allocatedSeats: number;
+  totalSeats: number;
+  costPerUserMonthly: number;
+  renewalDate: string;
+  category: 'Productivity' | 'Security' | 'DevOps' | 'Design' | 'Infrastructure';
+  assignedDepartments: string[];
+}
+

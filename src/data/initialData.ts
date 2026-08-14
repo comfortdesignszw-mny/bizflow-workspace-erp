@@ -19,7 +19,11 @@ import {
   DeployPipeline,
   Deal,
   ClientAccount,
-  WorkplaceNote
+  WorkplaceNote,
+  ITTicket,
+  ITSystemHealth,
+  ITDeviceInventory,
+  ITSoftwareLicense
 } from '../types/erp';
 
 export const INITIAL_PERSONAS: UserPersona[] = [
@@ -2133,6 +2137,293 @@ export const INITIAL_NOTES: WorkplaceNote[] = [
     authorName: 'Marcus Chen',
     createdAt: '2026-08-08T11:00:00.000Z',
     updatedAt: '2026-08-11T16:20:00.000Z'
+  }
+];
+
+export const INITIAL_IT_TICKETS: ITTicket[] = [
+  {
+    id: 'it-tk-001',
+    ticketNumber: 'IT-4091',
+    title: 'Core VPN Gateway Connection Drops on macOS Sonoma',
+    description: 'Multiple engineering workstations on macOS 14.5 experiencing intermittent WireGuard handshakes when accessing the staging Kubernetes cluster.',
+    category: 'Network & VPN',
+    priority: 'HIGH',
+    status: 'Investigating',
+    requesterName: 'Amara Okafor',
+    requesterDepartment: 'Engineering',
+    requesterEmail: 'amara.okafor@comfortbizflow.io',
+    assignedEngineer: 'Alex Mercer (Network Lead)',
+    deviceInfo: 'MacBook Pro M3 Max - 10.14.82.11',
+    createdAt: '2026-08-14T03:15:00.000Z',
+    updatedAt: '2026-08-14T04:45:00.000Z',
+    slaDeadline: '2026-08-14T12:00:00.000Z',
+    ipAddress: '10.14.82.11',
+    tags: ['VPN', 'WireGuard', 'Engineering', 'macOS']
+  },
+  {
+    id: 'it-tk-002',
+    ticketNumber: 'IT-4092',
+    title: 'Executive Boardroom Display & Zoom Room Audio Glitch',
+    description: 'Dual 85" conference display fails to sync microphone audio stream from Dante DSP matrix. Requires physical AV patch & HDMI EDID reset.',
+    category: 'Hardware',
+    priority: 'CRITICAL',
+    status: 'In Progress',
+    requesterName: 'Eleanor Vance',
+    requesterDepartment: 'Executive Board',
+    requesterEmail: 'eleanor.vance@comfortbizflow.io',
+    assignedEngineer: 'Samantha Ross (Field Tech)',
+    deviceInfo: 'Neat Bar Pro AV Rack - Boardroom A',
+    createdAt: '2026-08-14T05:00:00.000Z',
+    updatedAt: '2026-08-14T05:40:00.000Z',
+    slaDeadline: '2026-08-14T07:30:00.000Z',
+    ipAddress: '192.168.10.45',
+    tags: ['Boardroom', 'AV', 'Critical', 'Executive']
+  },
+  {
+    id: 'it-tk-003',
+    ticketNumber: 'IT-4093',
+    title: 'SSO Okta Provisioning & AWS IAM Role Provisioning for New Hire',
+    description: 'Provision Google Workspace, GitHub Enterprise SSO, and read-only Production telemetry AWS IAM role for upcoming DevOps specialist onboarding.',
+    category: 'Access & Security',
+    priority: 'MEDIUM',
+    status: 'Open',
+    requesterName: 'Marcus Chen',
+    requesterDepartment: 'Human Resources',
+    requesterEmail: 'marcus.chen@comfortbizflow.io',
+    assignedEngineer: 'David Alvarez (IT Director)',
+    deviceInfo: 'Cloud Identity Federation',
+    createdAt: '2026-08-13T16:20:00.000Z',
+    updatedAt: '2026-08-13T16:20:00.000Z',
+    slaDeadline: '2026-08-15T17:00:00.000Z',
+    tags: ['SSO', 'Okta', 'IAM', 'Onboarding']
+  },
+  {
+    id: 'it-tk-004',
+    ticketNumber: 'IT-4094',
+    title: 'Figma Organization License Seat Upgrade for Product Design Team',
+    description: 'Add 3 Enterprise design seats to enable collaborative prototyping across marketing and web app sprint teams.',
+    category: 'Software & SaaS',
+    priority: 'LOW',
+    status: 'Waiting on User',
+    requesterName: 'Liam O\'Connor',
+    requesterDepartment: 'Marketing',
+    requesterEmail: 'liam.oconnor@comfortbizflow.io',
+    assignedEngineer: 'Samantha Ross (Field Tech)',
+    deviceInfo: 'SaaS License Portal',
+    createdAt: '2026-08-12T10:00:00.000Z',
+    updatedAt: '2026-08-13T14:10:00.000Z',
+    slaDeadline: '2026-08-16T17:00:00.000Z',
+    tags: ['Figma', 'SaaS', 'Design']
+  },
+  {
+    id: 'it-tk-005',
+    ticketNumber: 'IT-4095',
+    title: 'Floor 3 Wi-Fi 6 Access Point Rogue DHCP Warning',
+    description: 'Cisco Meraki dashboard triggered an alert for rogue IP collisions on subnet 10.14.30.0/24 near R&D lab.',
+    category: 'Network & VPN',
+    priority: 'HIGH',
+    status: 'Resolved',
+    requesterName: 'System Automated Monitor',
+    requesterDepartment: 'IT Infrastructure',
+    requesterEmail: 'noc-alerts@comfortbizflow.io',
+    assignedEngineer: 'Alex Mercer (Network Lead)',
+    deviceInfo: 'Meraki MR56 AP-03B',
+    createdAt: '2026-08-13T08:00:00.000Z',
+    updatedAt: '2026-08-13T11:30:00.000Z',
+    resolvedAt: '2026-08-13T11:30:00.000Z',
+    resolutionNotes: 'Isolated unmanaged developer test router and enabled DHCP snooping on switch port 24.',
+    slaDeadline: '2026-08-13T12:00:00.000Z',
+    ipAddress: '10.14.30.1',
+    tags: ['Meraki', 'Wi-Fi', 'DHCP', 'Security']
+  }
+];
+
+export const INITIAL_IT_SYSTEMS: ITSystemHealth[] = [
+  {
+    id: 'sys-01',
+    name: 'Enterprise WireGuard & IPSec VPN',
+    category: 'Network',
+    status: 'Operational',
+    uptimePercent: 99.98,
+    latencyMs: 14,
+    location: 'Cloud Ingress US-East / EU-West',
+    lastPing: 'Just now',
+    description: 'Zero-trust encrypted tunnel for remote workforce & production telemetry'
+  },
+  {
+    id: 'sys-02',
+    name: 'Active Directory & Okta Identity SSO',
+    category: 'Identity & Auth',
+    status: 'Operational',
+    uptimePercent: 100.0,
+    latencyMs: 18,
+    location: 'Identity Cloud Cluster',
+    lastPing: '1 min ago',
+    description: 'Centralized biometric, SAML 2.0, and OAuth2 security broker'
+  },
+  {
+    id: 'sys-03',
+    name: 'Floor 1-4 Wi-Fi 6 Mesh & Core Gateway',
+    category: 'Network',
+    status: 'Degraded',
+    uptimePercent: 99.45,
+    latencyMs: 42,
+    location: 'Headquarters Server Room 2B',
+    lastPing: '2 mins ago',
+    description: 'Meraki gigabit enterprise access points with dynamic VLAN routing'
+  },
+  {
+    id: 'sys-04',
+    name: 'Dexie.JS IndexedDB Sync Broker',
+    category: 'Infrastructure',
+    status: 'Operational',
+    uptimePercent: 99.99,
+    latencyMs: 6,
+    location: 'Local Browser Sandbox + API',
+    lastPing: 'Realtime',
+    description: 'Offline-first bidirectional replication and conflict resolution engine'
+  },
+  {
+    id: 'sys-05',
+    name: 'Palo Alto Perimeter NextGen Firewall',
+    category: 'Security',
+    status: 'Operational',
+    uptimePercent: 99.99,
+    latencyMs: 8,
+    location: 'Edge Gateway Rack A',
+    lastPing: '30s ago',
+    description: 'Deep packet inspection, intrusion prevention & SSL decryption'
+  },
+  {
+    id: 'sys-06',
+    name: 'Google Workspace & Microsoft 365 Relay',
+    category: 'Communication',
+    status: 'Operational',
+    uptimePercent: 100.0,
+    latencyMs: 22,
+    location: 'Cloud Global Endpoints',
+    lastPing: 'Just now',
+    description: 'Corporate mail routing, calendar hooks & audit compliance archives'
+  }
+];
+
+export const INITIAL_IT_DEVICES: ITDeviceInventory[] = [
+  {
+    id: 'dev-01',
+    assetTag: 'HW-MAC-082',
+    deviceName: 'MacBook Pro 16" M3 Max (64GB)',
+    type: 'MacBook Pro',
+    serialNumber: 'C02G9984MD6R',
+    assignedTo: 'Amara Okafor',
+    department: 'Engineering',
+    osVersion: 'macOS Sonoma 14.5',
+    ipAddress: '10.14.82.11',
+    healthStatus: 'Healthy',
+    warrantyExpiry: '2027-11-30',
+    lastCheckin: '2026-08-14 06:15'
+  },
+  {
+    id: 'dev-02',
+    assetTag: 'HW-THK-104',
+    deviceName: 'Lenovo ThinkPad P16 Gen 2 Workstation',
+    type: 'ThinkPad',
+    serialNumber: 'PF388910',
+    assignedTo: 'Sophia Patel',
+    department: 'Finance & Accounting',
+    osVersion: 'Windows 11 Enterprise (23H2)',
+    ipAddress: '10.14.82.44',
+    healthStatus: 'Healthy',
+    warrantyExpiry: '2026-12-15',
+    lastCheckin: '2026-08-14 05:50'
+  },
+  {
+    id: 'dev-03',
+    assetTag: 'HW-DELL-019',
+    deviceName: 'Dell Precision 5860 Tower Server',
+    type: 'Dell Workstation',
+    serialNumber: '7X89B23',
+    assignedTo: 'David Alvarez',
+    department: 'Engineering',
+    osVersion: 'Ubuntu Linux 24.04 LTS',
+    ipAddress: '10.14.82.100',
+    healthStatus: 'Update Required',
+    warrantyExpiry: '2027-04-20',
+    lastCheckin: '2026-08-14 06:00'
+  },
+  {
+    id: 'dev-04',
+    assetTag: 'NET-FW-001',
+    deviceName: 'Palo Alto PA-3220 Hardware Firewall',
+    type: 'Firewall Gateway',
+    serialNumber: '012903847291',
+    assignedTo: 'IT Infrastructure Rack',
+    department: 'IT Department',
+    osVersion: 'PAN-OS 11.1.2',
+    ipAddress: '10.14.0.1',
+    healthStatus: 'Healthy',
+    warrantyExpiry: '2028-08-01',
+    lastCheckin: '2026-08-14 06:24'
+  },
+  {
+    id: 'dev-05',
+    assetTag: 'NET-SW-008',
+    deviceName: 'Cisco Catalyst 9300 48-Port PoE Switch',
+    type: 'Cisco Switch',
+    serialNumber: 'FCW2349A098',
+    assignedTo: 'HQ Network IDF-2',
+    department: 'IT Department',
+    osVersion: 'Cisco IOS XE 17.9',
+    ipAddress: '10.14.0.2',
+    healthStatus: 'Healthy',
+    warrantyExpiry: '2027-09-10',
+    lastCheckin: '2026-08-14 06:20'
+  }
+];
+
+export const INITIAL_IT_LICENSES: ITSoftwareLicense[] = [
+  {
+    id: 'lic-01',
+    softwareName: 'Google Workspace Enterprise Plus',
+    vendor: 'Google Cloud',
+    allocatedSeats: 48,
+    totalSeats: 60,
+    costPerUserMonthly: 30,
+    renewalDate: '2027-01-15',
+    category: 'Productivity',
+    assignedDepartments: ['All Departments']
+  },
+  {
+    id: 'lic-02',
+    softwareName: 'GitHub Enterprise Server & Copilot',
+    vendor: 'GitHub / Microsoft',
+    allocatedSeats: 22,
+    totalSeats: 25,
+    costPerUserMonthly: 39,
+    renewalDate: '2026-11-30',
+    category: 'DevOps',
+    assignedDepartments: ['Engineering', 'IT Department']
+  },
+  {
+    id: 'lic-03',
+    softwareName: 'Figma Enterprise Organization',
+    vendor: 'Figma Inc',
+    allocatedSeats: 12,
+    totalSeats: 15,
+    costPerUserMonthly: 75,
+    renewalDate: '2026-10-01',
+    category: 'Design',
+    assignedDepartments: ['Design', 'Engineering', 'Marketing']
+  },
+  {
+    id: 'lic-04',
+    softwareName: 'CrowdStrike Falcon Complete EDR',
+    vendor: 'CrowdStrike',
+    allocatedSeats: 65,
+    totalSeats: 70,
+    costPerUserMonthly: 18,
+    renewalDate: '2027-03-20',
+    category: 'Security',
+    assignedDepartments: ['All Endpoints']
   }
 ];
 

@@ -10,7 +10,14 @@ import {
   CheckCircle2,
   AlertTriangle,
   FileText,
-  Sliders
+  Sliders,
+  Database,
+  Wifi,
+  WifiOff,
+  Download,
+  HardDrive,
+  Layers,
+  Smartphone
 } from 'lucide-react';
 import { CompanySettings } from '../../types/erp';
 
@@ -20,7 +27,21 @@ export const SettingsModule: React.FC = () => {
     updateSettings,
     auditLogs,
     resetAllDataToDefault,
-    currentUser
+    currentUser,
+    isOnline,
+    syncStatus,
+    lastSyncTime,
+    triggerManualSync,
+    isInstallPromptAvailable,
+    installPWA,
+    offlineStorageEngine,
+    employees,
+    accessLogs,
+    tasks,
+    projects,
+    invoices,
+    notes,
+    payrollRuns
   } = useERP();
 
   const [formSettings, setFormSettings] = useState<CompanySettings>(settings);
@@ -43,11 +64,11 @@ export const SettingsModule: React.FC = () => {
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800 text-neutral-300 border border-neutral-700">
               System Administration
             </span>
-            <span className="text-xs text-neutral-400 font-mono">Security & Audit Trails</span>
+            <span className="text-xs text-blue-400 font-mono">Offline-First PWA & Dexie.JS</span>
           </div>
-          <h1 className="text-2xl font-black text-white mt-1">System Configuration & Audit Logs</h1>
+          <h1 className="text-2xl font-black text-white mt-1">System Configuration & Storage Engine</h1>
           <p className="text-xs text-neutral-400">
-            Workforce shift parameters, payroll calculation constants, and append-only governance logs.
+            Workforce shift parameters, Dexie.JS IndexedDB local sandbox, offline sync, and governance audit trails.
           </p>
         </div>
 
@@ -56,6 +77,95 @@ export const SettingsModule: React.FC = () => {
             {saveNotice}
           </span>
         )}
+      </div>
+
+      {/* PWA & Dexie Offline-First Architecture Panel */}
+      <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-neutral-950 border border-neutral-700 p-1 flex items-center justify-center shrink-0">
+              <img
+                src="/icons/icon-192x192.png"
+                alt="App Icon"
+                className="w-full h-full object-cover rounded-lg"
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-white text-sm">Offline-First PWA Engine & Dexie.JS Sandbox</h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Active
+                </span>
+              </div>
+              <p className="text-xs text-neutral-400">
+                Source of Truth: Browser Sandbox (Dexie IndexedDB) &rarr; LocalStorage &rarr; Online Datastore Sync
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={triggerManualSync}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-medium border border-neutral-700 transition-colors cursor-pointer"
+              id="btn-settings-manual-sync"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncStatus === 'syncing' ? 'animate-spin text-blue-400' : ''}`} />
+              <span>{syncStatus === 'syncing' ? 'Syncing...' : 'Sync Dexie to Remote'}</span>
+            </button>
+
+            {isInstallPromptAvailable && (
+              <button
+                onClick={installPWA}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold shadow-lg shadow-blue-900/30 transition-all cursor-pointer"
+                id="btn-settings-install-pwa"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Install Native App</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Database & Sync Metrics */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+          <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-1">
+            <div className="flex items-center justify-between text-neutral-400">
+              <span>Database Engine</span>
+              <Database className="w-3.5 h-3.5 text-blue-400" />
+            </div>
+            <p className="text-sm font-bold text-white font-mono">Dexie.JS v4 (IndexedDB)</p>
+            <p className="text-[10px] text-emerald-400">Browser Sandbox First</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-1">
+            <div className="flex items-center justify-between text-neutral-400">
+              <span>Connection Status</span>
+              {isOnline ? <Wifi className="w-3.5 h-3.5 text-emerald-400" /> : <WifiOff className="w-3.5 h-3.5 text-amber-400" />}
+            </div>
+            <p className="text-sm font-bold text-white">{isOnline ? 'Online (Realtime)' : 'Offline (Local Safe)'}</p>
+            <p className="text-[10px] text-neutral-400">Last Synced: {lastSyncTime}</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-1">
+            <div className="flex items-center justify-between text-neutral-400">
+              <span>Local Entities Indexed</span>
+              <HardDrive className="w-3.5 h-3.5 text-indigo-400" />
+            </div>
+            <p className="text-sm font-bold text-white font-mono">
+              {employees.length + accessLogs.length + tasks.length + projects.length + invoices.length + notes.length} Records
+            </p>
+            <p className="text-[10px] text-neutral-400">19 Tables in Dexie Schema</p>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-neutral-950/80 border border-neutral-800 space-y-1">
+            <div className="flex items-center justify-between text-neutral-400">
+              <span>PWA Native App</span>
+              <Smartphone className="w-3.5 h-3.5 text-cyan-400" />
+            </div>
+            <p className="text-sm font-bold text-white">Standalone Capable</p>
+            <p className="text-[10px] text-blue-400">Service Worker v1 Cached</p>
+          </div>
+        </div>
       </div>
 
       {/* Settings Form */}

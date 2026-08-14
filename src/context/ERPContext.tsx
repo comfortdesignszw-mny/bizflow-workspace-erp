@@ -29,7 +29,11 @@ import {
   Deal,
   DealStage,
   ClientAccount,
-  WorkplaceNote
+  WorkplaceNote,
+  ITTicket,
+  ITSystemHealth,
+  ITDeviceInventory,
+  ITSoftwareLicense
 } from '../types/erp';
 import {
   INITIAL_PERSONAS,
@@ -52,10 +56,31 @@ import {
   INITIAL_DEPLOY_PIPELINES,
   INITIAL_CLIENT_ACCOUNTS,
   INITIAL_DEALS,
-  INITIAL_NOTES
+  INITIAL_NOTES,
+  INITIAL_IT_TICKETS,
+  INITIAL_IT_SYSTEMS,
+  INITIAL_IT_DEVICES,
+  INITIAL_IT_LICENSES
 } from '../data/initialData';
+import { db } from '../db/erpDexieDb';
+import {
+  getLocalSandbox,
+  setLocalSandbox,
+  loadCollectionOfflineFirst,
+  persistCollectionToStorage,
+  performFullSync
+} from '../db/offlineSyncService';
 
 interface ERPContextType {
+  // PWA & Offline Engine
+  isOnline: boolean;
+  syncStatus: 'synced' | 'syncing' | 'offline';
+  lastSyncTime: string;
+  triggerManualSync: () => Promise<void>;
+  isInstallPromptAvailable: boolean;
+  installPWA: () => Promise<void>;
+  offlineStorageEngine: string;
+
   // Current logged in persona & RBAC
   currentUser: UserPersona;
   setCurrentUser: (user: UserPersona) => void;
@@ -87,6 +112,10 @@ interface ERPContextType {
   deals: Deal[];
   clientAccounts: ClientAccount[];
   notes: WorkplaceNote[];
+  itTickets: ITTicket[];
+  itSystems: ITSystemHealth[];
+  itDevices: ITDeviceInventory[];
+  itLicenses: ITSoftwareLicense[];
 
   // Computed & Live presence
   currentlyInsideEmployees: Employee[];
@@ -155,6 +184,17 @@ interface ERPContextType {
   updateNote: (id: string, updates: Partial<WorkplaceNote>) => void;
   deleteNote: (id: string) => void;
 
+  // Actions: IT Department & Issue Management
+  addITTicket: (ticket: Omit<ITTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt'>) => ITTicket;
+  updateITTicket: (id: string, updates: Partial<ITTicket>) => void;
+  resolveITTicket: (id: string, resolutionNotes: string) => void;
+  deleteITTicket: (id: string) => void;
+  updateSystemStatus: (id: string, status: ITSystemHealth['status'], latencyMs?: number) => void;
+  addITDevice: (device: Omit<ITDeviceInventory, 'id'>) => ITDeviceInventory;
+  updateITDevice: (id: string, updates: Partial<ITDeviceInventory>) => void;
+  addITLicense: (license: Omit<ITSoftwareLicense, 'id'>) => ITSoftwareLicense;
+  updateITLicense: (id: string, updates: Partial<ITSoftwareLicense>) => void;
+
   // Actions: Settings & System
   updateSettings: (updates: Partial<CompanySettings>) => void;
   logAudit: (action: string, module: string, details: string, status?: 'SUCCESS' | 'WARNING' | 'ERROR') => void;
@@ -193,30 +233,41 @@ function setStored<T>(key: string, value: T) {
 }
 
 export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState<UserPersona>(() => getStored('user', INITIAL_PERSONAS[0]));
+  // Network & Sync State
+  const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+  const [lastSyncTime, setLastSyncTime] = useState<string>(() => new Date().toLocaleTimeString());
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [isInstallPromptAvailable, setIsInstallPromptAvailable] = useState<boolean>(false);
+
+  const [currentUser, setCurrentUser] = useState<UserPersona>(() => getLocalSandbox('user', INITIAL_PERSONAS[0]));
   const [activeModule, setActiveModule] = useState<string>('dashboard');
 
-  const [employees, setEmployees] = useState<Employee[]>(() => getStored('employees', INITIAL_EMPLOYEES));
-  const [accessLogs, setAccessLogs] = useState<AccessLog[]>(() => getStored('access_logs', INITIAL_ACCESS_LOGS));
-  const [attendanceRollups, setAttendanceRollups] = useState<AttendanceRollup[]>(() => getStored('attendance_rollups', INITIAL_ATTENDANCE_ROLLUPS));
-  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>(() => getStored('payroll_runs', INITIAL_PAYROLL_RUNS));
-  const [jobOpenings, setJobOpenings] = useState<JobOpening[]>(() => getStored('job_openings', INITIAL_JOB_OPENINGS));
-  const [applicants, setApplicants] = useState<Applicant[]>(() => getStored('applicants', INITIAL_APPLICANTS));
-  const [projects, setProjects] = useState<Project[]>(() => getStored('projects', INITIAL_PROJECTS));
-  const [tasks, setTasks] = useState<Task[]>(() => getStored('tasks', INITIAL_TASKS));
-  const [assets, setAssets] = useState<Asset[]>(() => getStored('assets', INITIAL_ASSETS));
-  const [expenses, setExpenses] = useState<ExpenseClaim[]>(() => getStored('expenses', INITIAL_EXPENSES));
-  const [invoices, setInvoices] = useState<Invoice[]>(() => getStored('invoices', INITIAL_INVOICES));
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => getStored('audit_logs', INITIAL_AUDIT_LOGS));
-  const [settings, setSettings] = useState<CompanySettings>(() => getStored('settings', INITIAL_SETTINGS));
+  const [employees, setEmployees] = useState<Employee[]>(() => getLocalSandbox('employees', INITIAL_EMPLOYEES));
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>(() => getLocalSandbox('access_logs', INITIAL_ACCESS_LOGS));
+  const [attendanceRollups, setAttendanceRollups] = useState<AttendanceRollup[]>(() => getLocalSandbox('attendance_rollups', INITIAL_ATTENDANCE_ROLLUPS));
+  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>(() => getLocalSandbox('payroll_runs', INITIAL_PAYROLL_RUNS));
+  const [jobOpenings, setJobOpenings] = useState<JobOpening[]>(() => getLocalSandbox('job_openings', INITIAL_JOB_OPENINGS));
+  const [applicants, setApplicants] = useState<Applicant[]>(() => getLocalSandbox('applicants', INITIAL_APPLICANTS));
+  const [projects, setProjects] = useState<Project[]>(() => getLocalSandbox('projects', INITIAL_PROJECTS));
+  const [tasks, setTasks] = useState<Task[]>(() => getLocalSandbox('tasks', INITIAL_TASKS));
+  const [assets, setAssets] = useState<Asset[]>(() => getLocalSandbox('assets', INITIAL_ASSETS));
+  const [expenses, setExpenses] = useState<ExpenseClaim[]>(() => getLocalSandbox('expenses', INITIAL_EXPENSES));
+  const [invoices, setInvoices] = useState<Invoice[]>(() => getLocalSandbox('invoices', INITIAL_INVOICES));
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => getLocalSandbox('audit_logs', INITIAL_AUDIT_LOGS));
+  const [settings, setSettings] = useState<CompanySettings>(() => getLocalSandbox('settings', INITIAL_SETTINGS));
 
-  const [vendors, setVendors] = useState<Vendor[]>(() => getStored('vendors', INITIAL_VENDORS));
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => getStored('purchase_orders', INITIAL_PURCHASE_ORDERS));
-  const [microservices, setMicroservices] = useState<Microservice[]>(() => getStored('microservices', INITIAL_MICROSERVICES));
-  const [deployPipelines, setDeployPipelines] = useState<DeployPipeline[]>(() => getStored('deploy_pipelines', INITIAL_DEPLOY_PIPELINES));
-  const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>(() => getStored('client_accounts', INITIAL_CLIENT_ACCOUNTS));
-  const [deals, setDeals] = useState<Deal[]>(() => getStored('deals', INITIAL_DEALS));
-  const [notes, setNotes] = useState<WorkplaceNote[]>(() => getStored('notes', INITIAL_NOTES));
+  const [vendors, setVendors] = useState<Vendor[]>(() => getLocalSandbox('vendors', INITIAL_VENDORS));
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(() => getLocalSandbox('purchase_orders', INITIAL_PURCHASE_ORDERS));
+  const [microservices, setMicroservices] = useState<Microservice[]>(() => getLocalSandbox('microservices', INITIAL_MICROSERVICES));
+  const [deployPipelines, setDeployPipelines] = useState<DeployPipeline[]>(() => getLocalSandbox('deploy_pipelines', INITIAL_DEPLOY_PIPELINES));
+  const [clientAccounts, setClientAccounts] = useState<ClientAccount[]>(() => getLocalSandbox('client_accounts', INITIAL_CLIENT_ACCOUNTS));
+  const [deals, setDeals] = useState<Deal[]>(() => getLocalSandbox('deals', INITIAL_DEALS));
+  const [notes, setNotes] = useState<WorkplaceNote[]>(() => getLocalSandbox('notes', INITIAL_NOTES));
+  const [itTickets, setItTickets] = useState<ITTicket[]>(() => getLocalSandbox('it_tickets', INITIAL_IT_TICKETS));
+  const [itSystems, setItSystems] = useState<ITSystemHealth[]>(() => getLocalSandbox('it_systems', INITIAL_IT_SYSTEMS));
+  const [itDevices, setItDevices] = useState<ITDeviceInventory[]>(() => getLocalSandbox('it_devices', INITIAL_IT_DEVICES));
+  const [itLicenses, setItLicenses] = useState<ITSoftwareLicense[]>(() => getLocalSandbox('it_licenses', INITIAL_IT_LICENSES));
 
   // Modal states
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
@@ -224,28 +275,184 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedPayslipForModal, setSelectedPayslipForModal] = useState<PayslipItem | null>(null);
   const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<Invoice | null>(null);
 
-  // Sync to local storage
-  useEffect(() => { setStored('user', currentUser); }, [currentUser]);
-  useEffect(() => { setStored('employees', employees); }, [employees]);
-  useEffect(() => { setStored('access_logs', accessLogs); }, [accessLogs]);
-  useEffect(() => { setStored('attendance_rollups', attendanceRollups); }, [attendanceRollups]);
-  useEffect(() => { setStored('payroll_runs', payrollRuns); }, [payrollRuns]);
-  useEffect(() => { setStored('job_openings', jobOpenings); }, [jobOpenings]);
-  useEffect(() => { setStored('applicants', applicants); }, [applicants]);
-  useEffect(() => { setStored('projects', projects); }, [projects]);
-  useEffect(() => { setStored('tasks', tasks); }, [tasks]);
-  useEffect(() => { setStored('assets', assets); }, [assets]);
-  useEffect(() => { setStored('expenses', expenses); }, [expenses]);
-  useEffect(() => { setStored('invoices', invoices); }, [invoices]);
-  useEffect(() => { setStored('audit_logs', auditLogs); }, [auditLogs]);
-  useEffect(() => { setStored('settings', settings); }, [settings]);
-  useEffect(() => { setStored('vendors', vendors); }, [vendors]);
-  useEffect(() => { setStored('purchase_orders', purchaseOrders); }, [purchaseOrders]);
-  useEffect(() => { setStored('microservices', microservices); }, [microservices]);
-  useEffect(() => { setStored('deploy_pipelines', deployPipelines); }, [deployPipelines]);
-  useEffect(() => { setStored('client_accounts', clientAccounts); }, [clientAccounts]);
-  useEffect(() => { setStored('deals', deals); }, [deals]);
-  useEffect(() => { setStored('notes', notes); }, [notes]);
+  // 1. Online / Offline listeners & PWA install prompt handler
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setSyncStatus('syncing');
+      performFullSync().then(() => {
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString());
+      });
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      setSyncStatus('offline');
+    };
+
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setIsInstallPromptAvailable(true);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  // 2. Initial Boot: Load Dexie IndexedDB sandbox first, fallback to LocalStorage & Remote DB
+  useEffect(() => {
+    async function hydrateFromIndexedDB() {
+      try {
+        const [
+          emp,
+          accLogs,
+          attRollups,
+          payRuns,
+          jobs,
+          apps,
+          projs,
+          tsks,
+          asts,
+          exps,
+          invs,
+          audits,
+          vends,
+          pos,
+          services,
+          pipes,
+          clients,
+          dls,
+          nts,
+          tks,
+          sys,
+          devs,
+          lics
+        ] = await Promise.all([
+          loadCollectionOfflineFirst('employees', db.employees, INITIAL_EMPLOYEES),
+          loadCollectionOfflineFirst('access_logs', db.accessLogs, INITIAL_ACCESS_LOGS),
+          loadCollectionOfflineFirst('attendance_rollups', db.attendanceRollups, INITIAL_ATTENDANCE_ROLLUPS),
+          loadCollectionOfflineFirst('payroll_runs', db.payrollRuns, INITIAL_PAYROLL_RUNS),
+          loadCollectionOfflineFirst('job_openings', db.jobOpenings, INITIAL_JOB_OPENINGS),
+          loadCollectionOfflineFirst('applicants', db.applicants, INITIAL_APPLICANTS),
+          loadCollectionOfflineFirst('projects', db.projects, INITIAL_PROJECTS),
+          loadCollectionOfflineFirst('tasks', db.tasks, INITIAL_TASKS),
+          loadCollectionOfflineFirst('assets', db.assets, INITIAL_ASSETS),
+          loadCollectionOfflineFirst('expenses', db.expenses, INITIAL_EXPENSES),
+          loadCollectionOfflineFirst('invoices', db.invoices, INITIAL_INVOICES),
+          loadCollectionOfflineFirst('audit_logs', db.auditLogs, INITIAL_AUDIT_LOGS),
+          loadCollectionOfflineFirst('vendors', db.vendors, INITIAL_VENDORS),
+          loadCollectionOfflineFirst('purchase_orders', db.purchaseOrders, INITIAL_PURCHASE_ORDERS),
+          loadCollectionOfflineFirst('microservices', db.microservices, INITIAL_MICROSERVICES),
+          loadCollectionOfflineFirst('deploy_pipelines', db.deployPipelines, INITIAL_DEPLOY_PIPELINES),
+          loadCollectionOfflineFirst('client_accounts', db.clientAccounts, INITIAL_CLIENT_ACCOUNTS),
+          loadCollectionOfflineFirst('deals', db.deals, INITIAL_DEALS),
+          loadCollectionOfflineFirst('notes', db.notes, INITIAL_NOTES),
+          loadCollectionOfflineFirst('it_tickets', db.itTickets, INITIAL_IT_TICKETS),
+          loadCollectionOfflineFirst('it_systems', db.itSystems, INITIAL_IT_SYSTEMS),
+          loadCollectionOfflineFirst('it_devices', db.itDevices, INITIAL_IT_DEVICES),
+          loadCollectionOfflineFirst('it_licenses', db.itLicenses, INITIAL_IT_LICENSES)
+        ]);
+
+        if (emp && emp.length) setEmployees(emp);
+        if (accLogs && accLogs.length) setAccessLogs(accLogs);
+        if (attRollups && attRollups.length) setAttendanceRollups(attRollups);
+        if (payRuns && payRuns.length) setPayrollRuns(payRuns);
+        if (jobs && jobs.length) setJobOpenings(jobs);
+        if (apps && apps.length) setApplicants(apps);
+        if (projs && projs.length) setProjects(projs);
+        if (tsks && tsks.length) setTasks(tsks);
+        if (asts && asts.length) setAssets(asts);
+        if (exps && exps.length) setExpenses(exps);
+        if (invs && invs.length) setInvoices(invs);
+        if (audits && audits.length) setAuditLogs(audits);
+        if (vends && vends.length) setVendors(vends);
+        if (pos && pos.length) setPurchaseOrders(pos);
+        if (services && services.length) setMicroservices(services);
+        if (pipes && pipes.length) setDeployPipelines(pipes);
+        if (clients && clients.length) setClientAccounts(clients);
+        if (dls && dls.length) setDeals(dls);
+        if (nts && nts.length) setNotes(nts);
+        if (tks && tks.length) setItTickets(tks);
+        if (sys && sys.length) setItSystems(sys);
+        if (devs && devs.length) setItDevices(devs);
+        if (lics && lics.length) setItLicenses(lics);
+      } catch (err) {
+        console.warn('[Dexie Initial Boot] Hydration notice:', err);
+      }
+    }
+
+    hydrateFromIndexedDB();
+  }, []);
+
+  // 3. Persistent Sync: Multi-tier IndexedDB + LocalStorage persistence
+  useEffect(() => { setLocalSandbox('user', currentUser); }, [currentUser]);
+  useEffect(() => { persistCollectionToStorage('employees', db.employees, employees); }, [employees]);
+  useEffect(() => { persistCollectionToStorage('access_logs', db.accessLogs, accessLogs); }, [accessLogs]);
+  useEffect(() => { persistCollectionToStorage('attendance_rollups', db.attendanceRollups, attendanceRollups); }, [attendanceRollups]);
+  useEffect(() => { persistCollectionToStorage('payroll_runs', db.payrollRuns, payrollRuns); }, [payrollRuns]);
+  useEffect(() => { persistCollectionToStorage('job_openings', db.jobOpenings, jobOpenings); }, [jobOpenings]);
+  useEffect(() => { persistCollectionToStorage('applicants', db.applicants, applicants); }, [applicants]);
+  useEffect(() => { persistCollectionToStorage('projects', db.projects, projects); }, [projects]);
+  useEffect(() => { persistCollectionToStorage('tasks', db.tasks, tasks); }, [tasks]);
+  useEffect(() => { persistCollectionToStorage('assets', db.assets, assets); }, [assets]);
+  useEffect(() => { persistCollectionToStorage('expenses', db.expenses, expenses); }, [expenses]);
+  useEffect(() => { persistCollectionToStorage('invoices', db.invoices, invoices); }, [invoices]);
+  useEffect(() => { persistCollectionToStorage('audit_logs', db.auditLogs, auditLogs); }, [auditLogs]);
+  useEffect(() => { setLocalSandbox('settings', settings); }, [settings]);
+  useEffect(() => { persistCollectionToStorage('vendors', db.vendors, vendors); }, [vendors]);
+  useEffect(() => { persistCollectionToStorage('purchase_orders', db.purchaseOrders, purchaseOrders); }, [purchaseOrders]);
+  useEffect(() => { persistCollectionToStorage('microservices', db.microservices, microservices); }, [microservices]);
+  useEffect(() => { persistCollectionToStorage('deploy_pipelines', db.deployPipelines, deployPipelines); }, [deployPipelines]);
+  useEffect(() => { persistCollectionToStorage('client_accounts', db.clientAccounts, clientAccounts); }, [clientAccounts]);
+  useEffect(() => { persistCollectionToStorage('deals', db.deals, deals); }, [deals]);
+  useEffect(() => { persistCollectionToStorage('notes', db.notes, notes); }, [notes]);
+  useEffect(() => { persistCollectionToStorage('it_tickets', db.itTickets, itTickets); }, [itTickets]);
+  useEffect(() => { persistCollectionToStorage('it_systems', db.itSystems, itSystems); }, [itSystems]);
+  useEffect(() => { persistCollectionToStorage('it_devices', db.itDevices, itDevices); }, [itDevices]);
+  useEffect(() => { persistCollectionToStorage('it_licenses', db.itLicenses, itLicenses); }, [itLicenses]);
+
+  // Manual Full Sync Trigger
+  const triggerManualSync = useCallback(async () => {
+    setSyncStatus('syncing');
+    try {
+      const res = await performFullSync();
+      if (res.success) {
+        setSyncStatus('synced');
+        setLastSyncTime(new Date().toLocaleTimeString());
+      } else {
+        setSyncStatus(navigator.onLine ? 'synced' : 'offline');
+      }
+    } catch {
+      setSyncStatus(navigator.onLine ? 'synced' : 'offline');
+    }
+  }, []);
+
+  // PWA Native Installation Trigger
+  const installPWA = useCallback(async () => {
+    if (!deferredPrompt) {
+      alert('PWA installation prompt is ready or already installed as a standalone app.');
+      return;
+    }
+    try {
+      deferredPrompt.prompt();
+      const choiceResult = await deferredPrompt.userChoice;
+      if (choiceResult.outcome === 'accepted') {
+        console.log('[PWA] User accepted the install prompt');
+        setIsInstallPromptAvailable(false);
+      }
+      setDeferredPrompt(null);
+    } catch (e) {
+      console.warn('[PWA] Installation trigger error:', e);
+    }
+  }, [deferredPrompt]);
 
   const hasRole = useCallback((allowedRoles: UserRole[]): boolean => {
     if (currentUser.role === 'ADMIN') return true;
@@ -1038,6 +1245,82 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setNotes(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  // IT Department Actions
+  const addITTicket = useCallback((ticket: Omit<ITTicket, 'id' | 'ticketNumber' | 'createdAt' | 'updatedAt'>): ITTicket => {
+    const count = itTickets.length + 1;
+    const newTicket: ITTicket = {
+      ...ticket,
+      id: `it-${Date.now()}`,
+      ticketNumber: `INC-2026-${1000 + count}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    setItTickets(prev => [newTicket, ...prev]);
+    logAudit('IT_TICKET_CREATED', 'IT Department', `Created incident ticket ${newTicket.ticketNumber} (${newTicket.category}) - ${newTicket.title}.`);
+    return newTicket;
+  }, [itTickets.length, logAudit]);
+
+  const updateITTicket = useCallback((id: string, updates: Partial<ITTicket>) => {
+    setItTickets(prev => prev.map(t => t.id === id ? { ...t, ...updates, updatedAt: new Date().toISOString() } : t));
+    logAudit('IT_TICKET_UPDATED', 'IT Department', `Updated ticket #${id}.`);
+  }, [logAudit]);
+
+  const resolveITTicket = useCallback((id: string, resolutionNotes: string) => {
+    setItTickets(prev => prev.map(t => t.id === id ? {
+      ...t,
+      status: 'Resolved',
+      resolutionNotes,
+      resolvedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } : t));
+    logAudit('IT_TICKET_RESOLVED', 'IT Department', `Resolved incident ticket #${id}.`);
+  }, [logAudit]);
+
+  const deleteITTicket = useCallback((id: string) => {
+    setItTickets(prev => prev.filter(t => t.id !== id));
+    logAudit('IT_TICKET_DELETED', 'IT Department', `Deleted ticket #${id}.`, 'WARNING');
+  }, [logAudit]);
+
+  const updateSystemStatus = useCallback((id: string, status: ITSystemHealth['status'], latencyMs?: number) => {
+    setItSystems(prev => prev.map(s => s.id === id ? {
+      ...s,
+      status,
+      latencyMs: latencyMs ?? s.latencyMs,
+      lastPing: 'Just now'
+    } : s));
+    logAudit('IT_SYSTEM_STATUS_UPDATED', 'IT Department', `System ${id} health status changed to ${status}.`);
+  }, [logAudit]);
+
+  const addITDevice = useCallback((device: Omit<ITDeviceInventory, 'id'>): ITDeviceInventory => {
+    const newDev: ITDeviceInventory = {
+      ...device,
+      id: `dev-${Date.now()}`
+    };
+    setItDevices(prev => [newDev, ...prev]);
+    logAudit('IT_DEVICE_ADDED', 'IT Department', `Registered IT hardware ${newDev.assetTag} (${newDev.brand} ${newDev.model}).`);
+    return newDev;
+  }, [logAudit]);
+
+  const updateITDevice = useCallback((id: string, updates: Partial<ITDeviceInventory>) => {
+    setItDevices(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+    logAudit('IT_DEVICE_UPDATED', 'IT Department', `Updated device info #${id}.`);
+  }, [logAudit]);
+
+  const addITLicense = useCallback((license: Omit<ITSoftwareLicense, 'id'>): ITSoftwareLicense => {
+    const newLic: ITSoftwareLicense = {
+      ...license,
+      id: `lic-${Date.now()}`
+    };
+    setItLicenses(prev => [newLic, ...prev]);
+    logAudit('IT_LICENSE_ADDED', 'IT Department', `Added license for ${newLic.softwareName}.`);
+    return newLic;
+  }, [logAudit]);
+
+  const updateITLicense = useCallback((id: string, updates: Partial<ITSoftwareLicense>) => {
+    setItLicenses(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+    logAudit('IT_LICENSE_UPDATED', 'IT Department', `Updated license info #${id}.`);
+  }, [logAudit]);
+
   // Settings & Reset
   const updateSettings = useCallback((updates: Partial<CompanySettings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -1065,12 +1348,49 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setClientAccounts(INITIAL_CLIENT_ACCOUNTS);
     setDeals(INITIAL_DEALS);
     setNotes(INITIAL_NOTES);
+    setItTickets(INITIAL_IT_TICKETS);
+    setItSystems(INITIAL_IT_SYSTEMS);
+    setItDevices(INITIAL_IT_DEVICES);
+    setItLicenses(INITIAL_IT_LICENSES);
     setCurrentUser(INITIAL_PERSONAS[0]);
     localStorage.clear();
+    // Clear Dexie tables
+    Promise.all([
+      db.employees.clear(),
+      db.accessLogs.clear(),
+      db.attendanceRollups.clear(),
+      db.payrollRuns.clear(),
+      db.jobOpenings.clear(),
+      db.applicants.clear(),
+      db.projects.clear(),
+      db.tasks.clear(),
+      db.assets.clear(),
+      db.expenses.clear(),
+      db.invoices.clear(),
+      db.auditLogs.clear(),
+      db.vendors.clear(),
+      db.purchaseOrders.clear(),
+      db.microservices.clear(),
+      db.deployPipelines.clear(),
+      db.clientAccounts.clear(),
+      db.deals.clear(),
+      db.notes.clear(),
+      db.itTickets.clear(),
+      db.itSystems.clear(),
+      db.itDevices.clear(),
+      db.itLicenses.clear()
+    ]).catch(err => console.warn('Dexie reset error:', err));
     logAudit('SYSTEM_RESET', 'System Admin', 'System database reset to initial demonstration state.', 'WARNING');
   }, [logAudit]);
 
   const value = {
+    isOnline,
+    syncStatus,
+    lastSyncTime,
+    triggerManualSync,
+    isInstallPromptAvailable,
+    installPWA,
+    offlineStorageEngine: 'Dexie.JS IndexedDB (Sandbox-First)',
     currentUser,
     setCurrentUser,
     availablePersonas: INITIAL_PERSONAS,
@@ -1097,6 +1417,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deals,
     clientAccounts,
     notes,
+    itTickets,
+    itSystems,
+    itDevices,
+    itLicenses,
     currentlyInsideEmployees,
     currentlyInsideCount,
     todayPresentCount,
@@ -1137,6 +1461,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addNote,
     updateNote,
     deleteNote,
+    addITTicket,
+    updateITTicket,
+    resolveITTicket,
+    deleteITTicket,
+    updateSystemStatus,
+    addITDevice,
+    updateITDevice,
+    addITLicense,
+    updateITLicense,
     updateSettings,
     logAudit,
     resetAllDataToDefault,

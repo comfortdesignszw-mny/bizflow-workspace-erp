@@ -1,6 +1,6 @@
 {
   "name": "BizFlow Workforce ERP",
-  "description": "Enterprise workforce ERP featuring live QR access logs, attendance rollups, payroll snapshot runs, recruitment ATS, project task boards, inventory asset tracking, and AI insights.",
+  "description": "Offline-first enterprise ERP featuring Dexie.js IndexedDB storage, PWA installation, IT Department ticketing & systems management, live QR access control, attendance rollups, payroll snapshots, and analytics.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

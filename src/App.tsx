@@ -7,6 +7,7 @@ import { EmployeesModule } from './components/employees/EmployeesModule';
 import { AccessAndAttendanceModule } from './components/access/AccessAndAttendanceModule';
 import { PayrollModule } from './components/payroll/PayrollModule';
 import { RecruitmentModule } from './components/recruitment/RecruitmentModule';
+import { ITDepartmentModule } from './components/it/ITDepartmentModule';
 import { ProjectsModule } from './components/projects/ProjectsModule';
 import { InventoryModule } from './components/inventory/InventoryModule';
 import { FinanceModule } from './components/finance/FinanceModule';
@@ -43,8 +44,9 @@ const ERPAppContent: React.FC = () => {
         return <FinanceModule />;
       case 'procurement':
         return <ProcurementModule />;
+      case 'it-department':
       case 'projects':
-        return <ProjectsModule />;
+        return <ITDepartmentModule />;
       case 'engineering':
         return <EngineeringModule />;
       case 'sales-crm':

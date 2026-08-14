@@ -20,7 +20,10 @@ import {
   ArrowRight,
   X,
   Zap,
-  Info
+  Info,
+  Wifi,
+  WifiOff,
+  Download
 } from 'lucide-react';
 import { UserPersona } from '../../types/erp';
 
@@ -34,10 +37,17 @@ export const Header: React.FC = () => {
     projects,
     tasks,
     payrollRuns,
+    itTickets,
     todayLateCount,
     setIsQRScannerOpen,
     resetAllDataToDefault,
-    setActiveModule
+    setActiveModule,
+    isOnline,
+    syncStatus,
+    lastSyncTime,
+    triggerManualSync,
+    isInstallPromptAvailable,
+    installPWA
   } = useERP();
 
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
@@ -48,7 +58,7 @@ export const Header: React.FC = () => {
 
   const totalEmployees = employees.length;
 
-  // Derive urgent notifications from Projects, Tasks, Attendance, and Payroll
+  // Derive urgent notifications from IT Incidents, Projects, Tasks, Attendance, and Payroll
   const notifications = useMemo(() => {
     const list: Array<{
       id: string;
@@ -56,12 +66,29 @@ export const Header: React.FC = () => {
       description: string;
       time: string;
       priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'INFO';
-      type: 'project' | 'task' | 'attendance' | 'payroll';
+      type: 'project' | 'task' | 'attendance' | 'payroll' | 'it';
       targetModule: string;
       badgeText: string;
     }> = [];
 
-    // 1. Urgent / Approaching Project Deadlines
+    // 1. IT Incident Tickets (Critical / High)
+    (itTickets || []).forEach((t) => {
+      if (t.status !== 'Resolved' && t.status !== 'Closed') {
+        const isUrgent = t.priority === 'Critical' || t.priority === 'High';
+        list.push({
+          id: `it-${t.id}`,
+          title: `IT Incident ${t.ticketNumber}: ${t.title}`,
+          description: `Category: ${t.category}. Requester: ${t.requesterName} (${t.department}). SLA: ${t.slaTargetHours}h target.`,
+          time: 'Active IT Ticket',
+          priority: t.priority === 'Critical' ? 'CRITICAL' : 'HIGH',
+          type: 'it',
+          targetModule: 'it-department',
+          badgeText: `${t.ticketNumber} • ${t.category}`
+        });
+      }
+    });
+
+    // 2. Urgent / Approaching Project Deadlines
     projects.forEach((p) => {
       if (p.status !== 'Finished') {
         const hasPendingMilestone = (p.milestones || []).some(m => !m.completed);
@@ -142,10 +169,12 @@ export const Header: React.FC = () => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     const q = searchQuery.toLowerCase();
-    if (q.includes('pay') || q.includes('salary')) setActiveModule('payroll');
+    if (q.includes('it') || q.includes('ticket') || q.includes('server') || q.includes('laptop') || q.includes('wifi') || q.includes('vpn') || q.includes('mdm') || q.includes('license')) setActiveModule('it-department');
+    else if (q.includes('pay') || q.includes('salary')) setActiveModule('payroll');
     else if (q.includes('att') || q.includes('scan') || q.includes('gate') || q.includes('time')) setActiveModule('access');
     else if (q.includes('rec') || q.includes('job') || q.includes('hire') || q.includes('cv')) setActiveModule('recruitment');
-    else if (q.includes('proj') || q.includes('task')) setActiveModule('projects');
+    else if (q.includes('task')) setActiveModule('tasks');
+    else if (q.includes('proj')) setActiveModule('it-department');
     else if (q.includes('inv') || q.includes('bill') || q.includes('exp')) setActiveModule('finance');
     else if (q.includes('asset') || q.includes('equ')) setActiveModule('inventory');
     else setActiveModule('employees');
@@ -204,10 +233,50 @@ export const Header: React.FC = () => {
             <span className="font-bold">{currentlyInsideCount}/{totalEmployees}</span>
             <span className="text-neutral-300 font-normal">Inside Building</span>
           </div>
+
+          {/* Offline-First & Dexie Sync Status Indicator */}
+          <div
+            onClick={triggerManualSync}
+            className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium cursor-pointer transition-all ${
+              isOnline
+                ? syncStatus === 'syncing'
+                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20'
+                  : 'bg-neutral-900 border-neutral-700/80 text-neutral-300 hover:border-neutral-600'
+                : 'bg-amber-500/10 border-amber-500/40 text-amber-400 hover:bg-amber-500/20'
+            }`}
+            title={`Source of truth: Dexie.JS IndexedDB (Sandbox-First). Click to re-sync. Last sync: ${lastSyncTime}`}
+            id="badge-offline-sync"
+          >
+            {isOnline ? (
+              syncStatus === 'syncing' ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-blue-400" />
+              ) : (
+                <Wifi className="w-3.5 h-3.5 text-emerald-400" />
+              )
+            ) : (
+              <WifiOff className="w-3.5 h-3.5 text-amber-400" />
+            )}
+            <span className="font-semibold">
+              {isOnline ? (syncStatus === 'syncing' ? 'Syncing...' : 'Offline-Ready') : 'Offline (Local Sandbox)'}
+            </span>
+          </div>
         </div>
 
-        {/* Right Controls: Scan Terminal trigger, Notifications, Role Switcher */}
+        {/* Right Controls: Install PWA, Scan Terminal trigger, Notifications, Role Switcher */}
         <div className="flex items-center gap-3">
+          {/* PWA Install Button when prompt is available */}
+          {isInstallPromptAvailable && (
+            <button
+              onClick={installPWA}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold shadow-md shadow-cyan-900/30 transition-all active:scale-[0.98] cursor-pointer"
+              title="Install BizFlow ERP as a native standalone application on your device"
+              id="btn-header-install-app"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Install App</span>
+            </button>
+          )}
+
           {/* Quick QR Scanner CTA */}
           <button
             onClick={() => setIsQRScannerOpen(true)}
