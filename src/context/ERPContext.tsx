@@ -200,7 +200,9 @@ interface ERPContextType {
   logAudit: (action: string, module: string, details: string, status?: 'SUCCESS' | 'WARNING' | 'ERROR') => void;
   resetAllDataToDefault: () => void;
 
-  // Modal Triggers
+  // Modal Triggers & Mobile Navigation
+  isMobileNavOpen: boolean;
+  setIsMobileNavOpen: (open: boolean) => void;
   isQRScannerOpen: boolean;
   setIsQRScannerOpen: (open: boolean) => void;
   selectedEmployeeForBadge: Employee | null;
@@ -269,7 +271,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [itDevices, setItDevices] = useState<ITDeviceInventory[]>(() => getLocalSandbox('it_devices', INITIAL_IT_DEVICES));
   const [itLicenses, setItLicenses] = useState<ITSoftwareLicense[]>(() => getLocalSandbox('it_licenses', INITIAL_IT_LICENSES));
 
-  // Modal states
+  // Modal states & Navigation
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
   const [selectedPayslipForModal, setSelectedPayslipForModal] = useState<PayslipItem | null>(null);
@@ -1473,6 +1476,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSettings,
     logAudit,
     resetAllDataToDefault,
+    isMobileNavOpen,
+    setIsMobileNavOpen,
     isQRScannerOpen,
     setIsQRScannerOpen,
     selectedEmployeeForBadge,

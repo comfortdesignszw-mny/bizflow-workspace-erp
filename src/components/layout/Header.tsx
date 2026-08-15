@@ -23,7 +23,8 @@ import {
   Info,
   Wifi,
   WifiOff,
-  Download
+  Download,
+  Menu
 } from 'lucide-react';
 import { UserPersona } from '../../types/erp';
 
@@ -47,7 +48,10 @@ export const Header: React.FC = () => {
     lastSyncTime,
     triggerManualSync,
     isInstallPromptAvailable,
-    installPWA
+    installPWA,
+    isMobileNavOpen,
+    setIsMobileNavOpen,
+    activeModule
   } = useERP();
 
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
@@ -203,10 +207,21 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 md:px-6 bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 text-white" id="main-app-header">
+      <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-3 md:px-6 bg-neutral-900/90 backdrop-blur-md border-b border-neutral-800 text-white" id="main-app-header">
         
-        {/* Left: Search & Workplace Presence status */}
-        <div className="flex items-center gap-4 flex-1 max-w-xl">
+        {/* Left: Mobile Nav Toggle, Search & Workplace Presence status */}
+        <div className="flex items-center gap-2.5 md:gap-4 flex-1 max-w-xl">
+          {/* Mobile Navigation Drawer Toggle */}
+          <button
+            onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+            className="md:hidden p-2 rounded-xl bg-neutral-800/90 border border-neutral-700/80 text-neutral-200 hover:text-white hover:bg-neutral-700 active:scale-95 transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-sm"
+            title="Open Module Navigation"
+            id="btn-mobile-menu-toggle"
+          >
+            <Menu className="w-5 h-5 text-blue-400" />
+            <span className="text-[11px] font-bold text-neutral-300 hidden xs:inline tracking-wide">Menu</span>
+          </button>
+
           <form onSubmit={handleSearchSubmit} className="relative w-full max-w-xs sm:max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
             <input

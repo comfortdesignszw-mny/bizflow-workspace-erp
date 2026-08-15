@@ -24,7 +24,8 @@ import {
   Server,
   Terminal,
   Shield,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 
 interface SubNavItem {
@@ -52,7 +53,9 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
     isOnline,
     syncStatus,
     isInstallPromptAvailable,
-    installPWA
+    installPWA,
+    isMobileNavOpen,
+    setIsMobileNavOpen
   } = useERP();
 
   const [hrExpanded, setHrExpanded] = useState(false);
@@ -72,8 +75,9 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
 
   const handleNavClick = (moduleId: string) => {
     setActiveModule(moduleId);
-    // Auto-collapse on selection to leave only nav icons for maximum UI view space
-    setIsCollapsed(true);
+    // On mobile view: collapse the entire navbar and its icons completely off-screen
+    // to give an uncompromised full-screen view of the selected module
+    setIsMobileNavOpen(false);
   };
 
   const hrSubItems: SubNavItem[] = [
@@ -106,46 +110,67 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
   ];
 
   return (
-    <aside
-      className={`fixed md:sticky top-0 left-0 z-40 h-screen bg-neutral-950 border-r border-neutral-800 flex flex-col justify-between transition-all duration-300 ${
-        isCollapsed ? 'w-16 md:w-20' : 'w-64'
-      }`}
-      id="main-app-sidebar"
-    >
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Brand & Logo Section */}
-        <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-4 border-b border-neutral-800 shrink-0">
-          <div
-            onClick={() => handleNavClick('dashboard')}
-            className="flex items-center gap-2.5 cursor-pointer overflow-hidden group"
-          >
-            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-neutral-900 border border-neutral-700/80 p-0.5 overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-blue-950/40 group-hover:border-blue-500/50 transition-colors">
-              <img
-                src="/icons/icon-192x192.png"
-                alt="BizFlow ERP Logo"
-                className="w-full h-full object-cover rounded-lg"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            </div>
-            {!isCollapsed && (
-              <div className="leading-tight truncate">
-                <span className="font-bold text-sm text-white tracking-wide block">BizFlow ERP</span>
-                <span className="text-[10px] text-blue-400 block font-mono font-medium">Offline Engine</span>
-              </div>
-            )}
-          </div>
+    <>
+      {/* Mobile Backdrop Overlay - closes the entire navigation drawer when clicked */}
+      {isMobileNavOpen && (
+        <div
+          onClick={() => setIsMobileNavOpen(false)}
+          className="fixed inset-0 bg-black/80 backdrop-blur-xs z-40 md:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
 
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
-            title={isCollapsed ? 'Expand Sidebar' : 'Collapse to Icons'}
-            id="btn-toggle-sidebar"
-          >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 h-screen bg-neutral-950 border-r border-neutral-800 flex flex-col justify-between transition-all duration-300 ${
+          isMobileNavOpen ? 'translate-x-0 shadow-2xl shadow-black w-72 max-w-[85vw]' : '-translate-x-full md:translate-x-0'
+        } md:static md:sticky top-0 ${
+          isCollapsed ? 'md:w-20' : 'md:w-64'
+        }`}
+        id="main-app-sidebar"
+      >
+        <div className="flex flex-col h-full overflow-hidden">
+          {/* Brand & Logo Section */}
+          <div className="h-14 md:h-16 flex items-center justify-between px-3 md:px-4 border-b border-neutral-800 shrink-0">
+            <div
+              onClick={() => handleNavClick('dashboard')}
+              className="flex items-center gap-2.5 cursor-pointer overflow-hidden group"
+            >
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-neutral-900 border border-neutral-700/80 p-0.5 overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-blue-950/40 group-hover:border-blue-500/50 transition-colors">
+                <img
+                  src="/icons/icon-192x192.png"
+                  alt="BizFlow ERP Logo"
+                  className="w-full h-full object-cover rounded-lg"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+              </div>
+              <div className={`leading-tight truncate ${isCollapsed ? 'md:hidden' : 'block'}`}>
+                <span className="font-bold text-sm text-white tracking-wide block">BizFlow ERP</span>
+                <span className="text-[10px] text-blue-400 block font-mono font-medium">Enterprise Suite</span>
+              </div>
+            </div>
+
+            {/* Mobile close button (completely collapses the navbar and all icons) */}
+            <button
+              onClick={() => setIsMobileNavOpen(false)}
+              className="md:hidden p-2 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              title="Close Navigation"
+              id="btn-close-mobile-sidebar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Desktop toggle button (collapses to icon mode / expands) */}
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden md:block p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+              title={isCollapsed ? 'Expand Sidebar' : 'Collapse to Icons'}
+              id="btn-toggle-sidebar"
+            >
+              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </button>
+          </div>
 
         {/* Navigation Scrollable Area */}
         <nav className="p-2 md:p-3 space-y-2.5 md:space-y-3.5 overflow-y-auto flex-1 custom-scrollbar">
@@ -534,5 +559,6 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
         )}
       </div>
     </aside>
+    </>
   );
 };

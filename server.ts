@@ -46,10 +46,11 @@ async function startServer() {
   async function generateWithFallback(ai: GoogleGenAI, primaryModel: string, configObj: any) {
     const candidateModels = [
       primaryModel,
-      'gemini-2.5-flash',
-      'gemini-3.1-flash-lite',
+      'gemini-3.7-flash',
       'gemini-flash-latest',
-    ];
+      'gemini-3.1-flash-lite',
+    ].filter(Boolean);
+
     const uniqueModels = Array.from(new Set(candidateModels));
     let lastError = null;
 
@@ -63,10 +64,11 @@ async function startServer() {
       } catch (err: any) {
         lastError = err;
         const msg = err?.message || String(err);
-        console.warn(`[AI Service] Model ${model} unavailable (${err?.status || '429/Quota/Transient'}): ${msg.slice(0, 120)}... falling back.`);
+        // Clean notification for quota or model deprecation without uncaught crashes
+        console.warn(`[AI Engine] Model ${model} fallback (${err?.status || 'Rate/Quota'}): ${msg.slice(0, 100)}`);
       }
     }
-    throw lastError || new Error('All Gemini models unavailable or rate limited');
+    throw lastError || new Error('All Gemini models rate limited or quota exceeded');
   }
 
   // AI Resume Scoring & ATS Match Analysis Endpoint
