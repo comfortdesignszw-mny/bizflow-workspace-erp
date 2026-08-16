@@ -1,10 +1,12 @@
 {
   "name": "BizFlow Enterprise ERP",
   "short_name": "BizFlow ERP",
-  "description": "Offline-First Enterprise Resource Planning & Workforce Management Platform",
+  "description": "Offline-First Enterprise Resource Planning & Workforce Management Platform with Dexie.JS IndexedDB, biometric access, and multi-department analytics.",
   "start_url": "/",
   "id": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0a0a0a",
   "theme_color": "#2563eb",
@@ -13,41 +15,62 @@
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
-  "categories": ["business", "productivity", "utilities"],
+  "categories": ["business", "productivity", "utilities", "finance"],
   "shortcuts": [
     {
-      "name": "Dashboard",
+      "name": "Operations Dashboard",
+      "short_name": "Dashboard",
       "url": "/?module=dashboard",
-      "description": "Operations & Analytics Dashboard"
+      "description": "Overview of enterprise KPIs and workforce analytics",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Biometric Terminal",
+      "short_name": "Access",
       "url": "/?module=access",
-      "description": "Employee Access & Attendance Terminal"
+      "description": "QR attendance and biometric access verification",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Payroll",
+      "name": "Payroll & Comp",
+      "short_name": "Payroll",
       "url": "/?module=payroll",
-      "description": "Payroll & Compensation"
+      "description": "Workforce payroll, taxes, and itemized payslips",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     },
     {
-      "name": "Tasks & Projects",
-      "url": "/?module=tasks",
-      "description": "Sprint Tasks & Agile Project Management"
+      "name": "Projects Kanban",
+      "short_name": "Projects",
+      "url": "/?module=projects",
+      "description": "Agile project workflows and sprint roadmaps",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

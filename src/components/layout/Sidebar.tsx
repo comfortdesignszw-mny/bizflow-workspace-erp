@@ -54,6 +54,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
     syncStatus,
     isInstallPromptAvailable,
     installPWA,
+    isStandaloneMode,
     isMobileNavOpen,
     setIsMobileNavOpen
   } = useERP();
@@ -526,7 +527,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
 
       {/* Footer / System Status */}
       <div className="p-2.5 md:p-3 border-t border-neutral-800/80 bg-neutral-950/60 shrink-0 space-y-2">
-        {isInstallPromptAvailable && !isCollapsed && (
+        {!isStandaloneMode && !isCollapsed && (
           <button
             onClick={installPWA}
             className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold shadow-lg shadow-blue-900/30 transition-all cursor-pointer"

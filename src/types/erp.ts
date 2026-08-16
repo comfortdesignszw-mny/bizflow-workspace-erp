@@ -360,7 +360,7 @@ export interface CompanySettings {
   geminiAiEnabled: boolean;
 }
 
-// Procurement & Logistics Types
+// Procurement, Logistics & Fleet Types
 export type PurchaseOrderStatus = 'Draft' | 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Cancelled';
 
 export interface PurchaseOrderItem {
@@ -402,6 +402,86 @@ export interface Vendor {
   paymentTerms: string; // Net 30, Net 15
   status: 'Active' | 'Under Review' | 'Inactive';
   totalSpend: number;
+}
+
+// Fleet Management Sub-Sections Types
+export type VehicleStatus = 'assigned' | 'parked' | 'not working' | 'on repairs and service';
+export type VehicleCondition = 'Excellent' | 'Good' | 'Fair' | 'Poor' | 'Needs Attention';
+
+export interface Vehicle {
+  id: string;
+  type: string; // e.g. 'Pickup Truck', 'SUV', 'Van', 'Sedan', 'Box Truck', 'Minibus', 'Motorcycle'
+  make: string; // e.g. 'Toyota', 'Ford', 'Isuzu', 'Mercedes-Benz', 'Nissan', 'Hyundai'
+  model: string; // e.g. 'Hilux 2.8 GD-6', 'Ranger XLT', 'D-Max 3.0', 'Sprinter 519'
+  regNumber: string; // e.g. 'ABC-1234', 'FLT-8890'
+  year: number; // e.g. 2024
+  condition: VehicleCondition;
+  status: VehicleStatus; // 'assigned' | 'parked' | 'not working' | 'on repairs and service'
+  assignedDriverId?: string;
+  assignedDriverName?: string;
+  currentMileage: number; // e.g. 45200
+  fuelType?: 'Diesel' | 'Petrol' | 'Electric' | 'Hybrid';
+  fuelCapacity?: number; // e.g. 80L
+  lastServiceDate?: string;
+  nextServiceMileage?: number;
+  insuranceExpiry?: string;
+  color?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Driver {
+  id: string;
+  fullName: string;
+  licenseNumber: string; // Driver's Licence Number
+  licenseClass?: string; // e.g. 'Class 2 Heavy', 'Class 4 Light', 'Code 10'
+  dateEngaged: string; // Date engaged (YYYY-MM-DD)
+  contactNumber: string;
+  address: string;
+  status: 'Active' | 'On Leave' | 'Suspended' | 'Inactive';
+  assignedVehicleId?: string;
+  assignedVehicleReg?: string;
+  avatar?: string;
+  emergencyContact?: string;
+  licenseExpiry?: string;
+  totalTripsCompleted?: number;
+  notes?: string;
+  createdAt: string;
+}
+
+export interface TripLog {
+  id: string;
+  tripCode: string; // e.g. 'TRIP-2026-0042'
+  dateTime: string; // Date & Time of trip start (e.g. '2026-08-16T08:30')
+  date: string; // '2026-08-16'
+  time: string; // '08:30'
+  vehicleId: string;
+  vehicleType: string; // e.g. 'Pickup Truck'
+  vehicleMake: string; // e.g. 'Toyota Hilux'
+  regNumber: string; // e.g. 'ABC-1234'
+  driverId: string;
+  driverName: string; // Driver assigned
+  driverLicenseNumber?: string;
+  mileageOut: number; // Numerical value
+  fuelGaugeOut: string; // Text value e.g. 'Full (100%)', '3/4 Tank', '1/2 Tank', '1/4 Tank'
+  destination: string; // Destination of Trip
+  reasonOfTrip: string; // Reason of Trip
+  returnDateTime?: string; // Date and time returned
+  mileageIn: number; // Returning Mileage In (numerical value)
+  fuelGaugeIn: string; // Fuel Out / Fuel Gauge In upon return (text value)
+  totalMileage: number; // Auto calculated from Mileage In minus Mileage Out
+  status: 'Ongoing' | 'Completed' | 'Cancelled';
+  
+  // Auditable vehicle trip logs fields
+  loggedBy: string; // Who entered the log
+  loggedByEmail?: string;
+  loggedByRole?: string;
+  loggedAt: string; // Date and time when log was entered (ISO)
+  updatedBy?: string;
+  updatedAt?: string;
+  remarks?: string;
+  verifiedBySupervisor?: boolean;
 }
 
 // Engineering & Systems Types

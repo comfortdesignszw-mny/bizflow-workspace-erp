@@ -23,6 +23,8 @@ import { QRScannerModal } from './components/modals/QRScannerModal';
 import { DigitalBadgeModal } from './components/modals/DigitalBadgeModal';
 import { PayslipModal } from './components/modals/PayslipModal';
 import { InvoiceModal } from './components/modals/InvoiceModal';
+import { PWAInstallModal } from './components/modals/PWAInstallModal';
+import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 
 const ERPAppContent: React.FC = () => {
   const { activeModule } = useERP();
@@ -83,11 +85,13 @@ const ERPAppContent: React.FC = () => {
         </main>
       </div>
 
-      {/* Global Modals */}
+      {/* Global Modals & Install Prompts */}
       <QRScannerModal />
       <DigitalBadgeModal />
       <PayslipModal />
       <InvoiceModal />
+      <PWAInstallModal />
+      <PWAInstallBanner />
     </div>
   );
 };

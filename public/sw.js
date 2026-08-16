@@ -1,23 +1,25 @@
 // BizFlow ERP Service Worker - Offline-First Caching Engine
-const CACHE_NAME = 'bizflow-erp-v1';
+const CACHE_NAME = 'bizflow-erp-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/manifest.webmanifest',
-  '/manifest.js',
   '/icon.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  '/favicon.ico'
+  '/icons/icon-maskable-192x192.png',
+  '/icons/icon-maskable-512x512.png',
+  '/favicon.ico',
+  '/favicon.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching offline application shell');
+      console.log('[Service Worker] Pre-caching offline application shell and icons');
       return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[Service Worker] Failed to cache some assets during install:', err);
+        console.warn('[Service Worker] Non-fatal caching notice during install:', err);
       });
     }).then(() => self.skipWaiting())
   );
@@ -28,7 +30,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => {
-          console.log('[Service Worker] Removing deprecated cache:', key);
+          console.log('[Service Worker] Removing outdated cache:', key);
           return caches.delete(key);
         })
       );

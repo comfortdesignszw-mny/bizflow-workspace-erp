@@ -20,7 +20,10 @@ import {
   INITIAL_DEPLOY_PIPELINES,
   INITIAL_CLIENT_ACCOUNTS,
   INITIAL_DEALS,
-  INITIAL_NOTES
+  INITIAL_NOTES,
+  INITIAL_VEHICLES,
+  INITIAL_DRIVERS,
+  INITIAL_TRIP_LOGS
 } from '../data/initialData';
 
 const LOCAL_STORAGE_PREFIX = 'bizflow_erp_';
@@ -198,7 +201,10 @@ export async function performFullSync(): Promise<{ success: boolean; syncedCount
       deployPipelines: await db.deployPipelines.toArray(),
       deals: await db.deals.toArray(),
       clientAccounts: await db.clientAccounts.toArray(),
-      notes: await db.notes.toArray()
+      notes: await db.notes.toArray(),
+      vehicles: await db.vehicles.toArray(),
+      drivers: await db.drivers.toArray(),
+      tripLogs: await db.tripLogs.toArray()
     };
 
     const res = await fetch('/api/db/sync-all', {

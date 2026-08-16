@@ -100,14 +100,18 @@ export const QRScannerModal: React.FC = () => {
             )}
           </div>
 
-          {/* Employee Selection */}
+          {/* Employee Selection & Quick QR Input */}
           <div className="space-y-3">
-            <label className="block text-xs font-medium text-neutral-300">Select Employee Badge to Scan</label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-neutral-300">Target Personnel or Scanned QR String</label>
+              <span className="text-[10px] font-mono text-blue-400">Direct Hardware Input Ready</span>
+            </div>
+
             <div className="grid grid-cols-1 gap-2">
               <select
                 value={selectedEmpId}
                 onChange={(e) => { setSelectedEmpId(e.target.value); setScanResult(null); }}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                 id="select-scanner-employee"
               >
                 {employees.map(emp => {
@@ -121,6 +125,43 @@ export const QRScannerModal: React.FC = () => {
               </select>
             </div>
 
+            {/* Quick manual QR decoder / scanner gun input */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Scan or paste Badge Code (e.g. EMP-1001 or QR JSON)..."
+                className="flex-1 bg-neutral-950 border border-neutral-700/80 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 font-mono focus:outline-none focus:border-blue-500"
+                onChange={(e) => {
+                  const val = e.target.value.trim();
+                  if (!val) return;
+                  // Try to find employee by code or parse json
+                  let targetCode = val;
+                  if (val.startsWith('{')) {
+                    try {
+                      const parsed = JSON.parse(val);
+                      if (parsed.badgeId) targetCode = parsed.badgeId;
+                      if (parsed.employeeId) {
+                        const found = employees.find(emp => emp.id === parsed.employeeId);
+                        if (found) {
+                          setSelectedEmpId(found.id);
+                          return;
+                        }
+                      }
+                    } catch {
+                      // ignore parse error
+                    }
+                  }
+                  const matched = employees.find(
+                    emp => emp.code.toLowerCase() === targetCode.toLowerCase() ||
+                           `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(targetCode.toLowerCase())
+                  );
+                  if (matched) {
+                    setSelectedEmpId(matched.id);
+                  }
+                }}
+              />
+            </div>
+
             {/* Selected Badge Preview Card */}
             {currentSelectedEmp && (
               <div className="flex items-center justify-between p-3 rounded-xl bg-neutral-800/60 border border-neutral-700/80">
@@ -129,10 +170,11 @@ export const QRScannerModal: React.FC = () => {
                     src={currentSelectedEmp.avatar}
                     alt={currentSelectedEmp.firstName}
                     className="w-10 h-10 rounded-full object-cover border border-neutral-600"
+                    referrerPolicy="no-referrer"
                   />
                   <div>
                     <p className="text-sm font-medium text-white">{currentSelectedEmp.firstName} {currentSelectedEmp.lastName}</p>
-                    <p className="text-xs text-neutral-400">{currentSelectedEmp.position} • {currentSelectedEmp.department}</p>
+                    <p className="text-xs text-neutral-400">{currentSelectedEmp.position} • {currentSelectedEmp.department} • <span className="font-mono text-blue-300 font-bold">{currentSelectedEmp.code}</span></p>
                   </div>
                 </div>
                 <div className="text-right">

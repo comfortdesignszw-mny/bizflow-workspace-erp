@@ -24,7 +24,9 @@ import {
   Wifi,
   WifiOff,
   Download,
-  Menu
+  Menu,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { UserPersona } from '../../types/erp';
 
@@ -49,8 +51,11 @@ export const Header: React.FC = () => {
     triggerManualSync,
     isInstallPromptAvailable,
     installPWA,
+    isStandaloneMode,
     isMobileNavOpen,
     setIsMobileNavOpen,
+    theme,
+    toggleTheme,
     activeModule
   } = useERP();
 
@@ -277,10 +282,34 @@ export const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Controls: Install PWA, Scan Terminal trigger, Notifications, Role Switcher */}
-        <div className="flex items-center gap-3">
-          {/* PWA Install Button when prompt is available */}
-          {isInstallPromptAvailable && (
+        {/* Right Controls: Theme Toggle, Install PWA, Scan Terminal trigger, Notifications, Role Switcher */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* Light / Dark Mode Toggle Switch */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center gap-1 p-1 rounded-xl bg-neutral-850 hover:bg-neutral-800 border border-neutral-700/80 text-neutral-300 hover:text-white transition-all cursor-pointer shadow-xs group"
+            title={theme === 'dark' ? 'Switch to Light Theme (White background, high contrast)' : 'Switch to Dark Theme'}
+            id="btn-theme-toggle"
+            aria-label="Toggle Light / Dark Theme"
+          >
+            <div className={`p-1 rounded-lg transition-all flex items-center justify-center ${
+              theme === 'light'
+                ? 'bg-amber-400 text-amber-950 shadow-xs font-bold'
+                : 'text-neutral-500 hover:text-neutral-300'
+            }`}>
+              <Sun className="w-3.5 h-3.5" />
+            </div>
+            <div className={`p-1 rounded-lg transition-all flex items-center justify-center ${
+              theme === 'dark'
+                ? 'bg-blue-600 text-white shadow-xs font-bold'
+                : 'text-neutral-500 hover:text-neutral-700'
+            }`}>
+              <Moon className="w-3.5 h-3.5" />
+            </div>
+          </button>
+
+          {/* PWA Install Button when not running in standalone mode */}
+          {!isStandaloneMode && (
             <button
               onClick={installPWA}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold shadow-md shadow-cyan-900/30 transition-all active:scale-[0.98] cursor-pointer"

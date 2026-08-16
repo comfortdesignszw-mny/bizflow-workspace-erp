@@ -19,9 +19,11 @@ import {
   ShieldCheck,
   Send,
   Boxes,
-  FileCheck
+  FileCheck,
+  Car
 } from 'lucide-react';
 import { PurchaseOrder, PurchaseOrderStatus, Vendor } from '../../types/erp';
+import { FleetManagement } from './FleetManagement';
 
 export const ProcurementModule: React.FC = () => {
   const {
@@ -33,7 +35,7 @@ export const ProcurementModule: React.FC = () => {
     currentUser
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'logistics'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'logistics' | 'fleet'>('orders');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [isAddPOModalOpen, setIsAddPOModalOpen] = useState(false);
@@ -212,6 +214,18 @@ export const ProcurementModule: React.FC = () => {
         >
           <Truck className="w-3.5 h-3.5" />
           <span>Freight & Tracking</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('fleet')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+            activeTab === 'fleet'
+              ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+          }`}
+          id="tab-procurement-fleet"
+        >
+          <Car className="w-3.5 h-3.5" />
+          <span>Fleet & Vehicles</span>
         </button>
       </div>
 
@@ -396,6 +410,11 @@ export const ProcurementModule: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* TAB 4: FLEET & VEHICLE LOGISTICS */}
+      {activeTab === 'fleet' && (
+        <FleetManagement />
       )}
 
       {/* MODAL: CREATE REQUISITION */}

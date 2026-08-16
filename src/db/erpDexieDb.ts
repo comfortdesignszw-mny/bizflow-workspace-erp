@@ -23,7 +23,10 @@ import {
   ITTicket,
   ITSystemHealth,
   ITDeviceInventory,
-  ITSoftwareLicense
+  ITSoftwareLicense,
+  Vehicle,
+  Driver,
+  TripLog
 } from '../types/erp';
 
 export interface SyncMetadata {
@@ -57,13 +60,16 @@ export class BizFlowDexieDatabase extends Dexie {
   itSystems!: Table<ITSystemHealth, string>;
   itDevices!: Table<ITDeviceInventory, string>;
   itLicenses!: Table<ITSoftwareLicense, string>;
+  vehicles!: Table<Vehicle, string>;
+  drivers!: Table<Driver, string>;
+  tripLogs!: Table<TripLog, string>;
   settings!: Table<CompanySettings & { id: string }, string>;
   syncMeta!: Table<SyncMetadata, string>;
 
   constructor() {
     super('BizFlowWorkforceERP_IndexedDB');
 
-    this.version(2).stores({
+    this.version(3).stores({
       employees: 'id, code, department, status, email, roleTitle',
       accessLogs: 'id, employeeId, timestamp, scanType, method, gate',
       attendanceRollups: 'id, date, employeeId, status',
@@ -87,6 +93,9 @@ export class BizFlowDexieDatabase extends Dexie {
       itSystems: 'id, name, category, status',
       itDevices: 'id, assetTag, type, assignedTo, healthStatus',
       itLicenses: 'id, softwareName, vendor, category',
+      vehicles: 'id, regNumber, status, type, make, condition',
+      drivers: 'id, licenseNumber, fullName, status',
+      tripLogs: 'id, tripCode, regNumber, driverId, date, status, loggedBy',
       settings: 'id',
       syncMeta: 'key, lastSyncedAt, isDirty'
     });

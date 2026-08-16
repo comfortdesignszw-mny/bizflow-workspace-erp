@@ -33,7 +33,10 @@ import {
   ITTicket,
   ITSystemHealth,
   ITDeviceInventory,
-  ITSoftwareLicense
+  ITSoftwareLicense,
+  Vehicle,
+  Driver,
+  TripLog
 } from '../types/erp';
 import {
   INITIAL_PERSONAS,
@@ -60,7 +63,10 @@ import {
   INITIAL_IT_TICKETS,
   INITIAL_IT_SYSTEMS,
   INITIAL_IT_DEVICES,
-  INITIAL_IT_LICENSES
+  INITIAL_IT_LICENSES,
+  INITIAL_VEHICLES,
+  INITIAL_DRIVERS,
+  INITIAL_TRIP_LOGS
 } from '../data/initialData';
 import { db } from '../db/erpDexieDb';
 import {
@@ -116,6 +122,9 @@ interface ERPContextType {
   itSystems: ITSystemHealth[];
   itDevices: ITDeviceInventory[];
   itLicenses: ITSoftwareLicense[];
+  vehicles: Vehicle[];
+  drivers: Driver[];
+  tripLogs: TripLog[];
 
   // Computed & Live presence
   currentlyInsideEmployees: Employee[];
@@ -171,9 +180,19 @@ interface ERPContextType {
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => void;
 
-  // Actions: Procurement
+  // Actions: Procurement & Fleet
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'poNumber' | 'orderDate'>) => PurchaseOrder;
   updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) => void;
+  addVehicle: (vehicle: Omit<Vehicle, 'id' | 'createdAt'>) => Vehicle;
+  updateVehicle: (id: string, updates: Partial<Vehicle>) => void;
+  deleteVehicle: (id: string) => void;
+  addDriver: (driver: Omit<Driver, 'id' | 'createdAt'>) => Driver;
+  updateDriver: (id: string, updates: Partial<Driver>) => void;
+  deleteDriver: (id: string) => void;
+  addTripLog: (trip: Omit<TripLog, 'id' | 'tripCode' | 'loggedAt' | 'totalMileage'> & { mileageIn?: number; totalMileage?: number; loggedBy?: string }) => TripLog;
+  updateTripLog: (id: string, updates: Partial<TripLog>) => void;
+  completeTripLog: (id: string, mileageIn: number, fuelGaugeIn: string, returnDateTime?: string, remarks?: string) => void;
+  deleteTripLog: (id: string) => void;
 
   // Actions: Sales & CRM
   addDeal: (deal: Omit<Deal, 'id' | 'lastActivity'>) => Deal;
@@ -196,6 +215,9 @@ interface ERPContextType {
   updateITLicense: (id: string, updates: Partial<ITSoftwareLicense>) => void;
 
   // Actions: Settings & System
+  theme: 'dark' | 'light';
+  setTheme: (theme: 'dark' | 'light') => void;
+  toggleTheme: () => void;
   updateSettings: (updates: Partial<CompanySettings>) => void;
   logAudit: (action: string, module: string, details: string, status?: 'SUCCESS' | 'WARNING' | 'ERROR') => void;
   resetAllDataToDefault: () => void;
@@ -205,6 +227,9 @@ interface ERPContextType {
   setIsMobileNavOpen: (open: boolean) => void;
   isQRScannerOpen: boolean;
   setIsQRScannerOpen: (open: boolean) => void;
+  isPWAInstallModalOpen: boolean;
+  setIsPWAInstallModalOpen: (open: boolean) => void;
+  isStandaloneMode: boolean;
   selectedEmployeeForBadge: Employee | null;
   setSelectedEmployeeForBadge: (emp: Employee | null) => void;
   selectedPayslipForModal: PayslipItem | null;
@@ -270,16 +295,71 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [itSystems, setItSystems] = useState<ITSystemHealth[]>(() => getLocalSandbox('it_systems', INITIAL_IT_SYSTEMS));
   const [itDevices, setItDevices] = useState<ITDeviceInventory[]>(() => getLocalSandbox('it_devices', INITIAL_IT_DEVICES));
   const [itLicenses, setItLicenses] = useState<ITSoftwareLicense[]>(() => getLocalSandbox('it_licenses', INITIAL_IT_LICENSES));
+  const [vehicles, setVehicles] = useState<Vehicle[]>(() => getLocalSandbox('vehicles', INITIAL_VEHICLES));
+  const [drivers, setDrivers] = useState<Driver[]>(() => getLocalSandbox('drivers', INITIAL_DRIVERS));
+  const [tripLogs, setTripLogs] = useState<TripLog[]>(() => getLocalSandbox('trip_logs', INITIAL_TRIP_LOGS));
 
   // Modal states & Navigation
+  const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('bizflow_erp_theme');
+      if (saved === 'light' || saved === 'dark') return saved;
+    }
+    return 'dark'; // Dark theme is default (current state)
+  });
+
+  const setTheme = (newTheme: 'dark' | 'light') => {
+    setThemeState(newTheme);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('bizflow_erp_theme', newTheme);
+    }
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  };
+
+  // Sync theme to root DOM and PWA theme-color
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      if (theme === 'light') {
+        root.classList.remove('dark');
+        root.classList.add('light');
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#ffffff');
+      } else {
+        root.classList.remove('light');
+        root.classList.add('dark');
+        const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+        if (metaThemeColor) metaThemeColor.setAttribute('content', '#0a0a0a');
+      }
+    }
+  }, [theme]);
+
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState(false);
+  const [isStandaloneMode, setIsStandaloneMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+    }
+    return false;
+  });
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
   const [selectedPayslipForModal, setSelectedPayslipForModal] = useState<PayslipItem | null>(null);
   const [selectedInvoiceForModal, setSelectedInvoiceForModal] = useState<Invoice | null>(null);
 
   // 1. Online / Offline listeners & PWA install prompt handler
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const checkStandalone = () => {
+        setIsStandaloneMode(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+      };
+      const mediaQuery = window.matchMedia('(display-mode: standalone)');
+      mediaQuery.addEventListener('change', checkStandalone);
+    }
+
     const handleOnline = () => {
       setIsOnline(true);
       setSyncStatus('syncing');
@@ -337,7 +417,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           tks,
           sys,
           devs,
-          lics
+          lics,
+          vehs,
+          drvs,
+          trips
         ] = await Promise.all([
           loadCollectionOfflineFirst('employees', db.employees, INITIAL_EMPLOYEES),
           loadCollectionOfflineFirst('access_logs', db.accessLogs, INITIAL_ACCESS_LOGS),
@@ -361,7 +444,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loadCollectionOfflineFirst('it_tickets', db.itTickets, INITIAL_IT_TICKETS),
           loadCollectionOfflineFirst('it_systems', db.itSystems, INITIAL_IT_SYSTEMS),
           loadCollectionOfflineFirst('it_devices', db.itDevices, INITIAL_IT_DEVICES),
-          loadCollectionOfflineFirst('it_licenses', db.itLicenses, INITIAL_IT_LICENSES)
+          loadCollectionOfflineFirst('it_licenses', db.itLicenses, INITIAL_IT_LICENSES),
+          loadCollectionOfflineFirst('vehicles', db.vehicles, INITIAL_VEHICLES),
+          loadCollectionOfflineFirst('drivers', db.drivers, INITIAL_DRIVERS),
+          loadCollectionOfflineFirst('trip_logs', db.tripLogs, INITIAL_TRIP_LOGS)
         ]);
 
         if (emp && emp.length) setEmployees(emp);
@@ -387,6 +473,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (sys && sys.length) setItSystems(sys);
         if (devs && devs.length) setItDevices(devs);
         if (lics && lics.length) setItLicenses(lics);
+        if (vehs && vehs.length) setVehicles(vehs);
+        if (drvs && drvs.length) setDrivers(drvs);
+        if (trips && trips.length) setTripLogs(trips);
       } catch (err) {
         console.warn('[Dexie Initial Boot] Hydration notice:', err);
       }
@@ -421,6 +510,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => { persistCollectionToStorage('it_systems', db.itSystems, itSystems); }, [itSystems]);
   useEffect(() => { persistCollectionToStorage('it_devices', db.itDevices, itDevices); }, [itDevices]);
   useEffect(() => { persistCollectionToStorage('it_licenses', db.itLicenses, itLicenses); }, [itLicenses]);
+  useEffect(() => { persistCollectionToStorage('vehicles', db.vehicles, vehicles); }, [vehicles]);
+  useEffect(() => { persistCollectionToStorage('drivers', db.drivers, drivers); }, [drivers]);
+  useEffect(() => { persistCollectionToStorage('trip_logs', db.tripLogs, tripLogs); }, [tripLogs]);
 
   // Manual Full Sync Trigger
   const triggerManualSync = useCallback(async () => {
@@ -440,20 +532,23 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // PWA Native Installation Trigger
   const installPWA = useCallback(async () => {
-    if (!deferredPrompt) {
-      alert('PWA installation prompt is ready or already installed as a standalone app.');
-      return;
-    }
-    try {
-      deferredPrompt.prompt();
-      const choiceResult = await deferredPrompt.userChoice;
-      if (choiceResult.outcome === 'accepted') {
-        console.log('[PWA] User accepted the install prompt');
-        setIsInstallPromptAvailable(false);
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const choiceResult = await deferredPrompt.userChoice;
+        if (choiceResult.outcome === 'accepted') {
+          console.log('[PWA] User accepted the install prompt');
+          setIsInstallPromptAvailable(false);
+          setIsPWAInstallModalOpen(false);
+        }
+        setDeferredPrompt(null);
+      } catch (e) {
+        console.warn('[PWA] Installation trigger error:', e);
+        setIsPWAInstallModalOpen(true);
       }
-      setDeferredPrompt(null);
-    } catch (e) {
-      console.warn('[PWA] Installation trigger error:', e);
+    } else {
+      // Open interactive installation guide modal for all devices/browsers
+      setIsPWAInstallModalOpen(true);
     }
   }, [deferredPrompt]);
 
@@ -1205,6 +1300,164 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('PO_STATUS_CHANGED', 'Procurement & Logistics', `Purchase order #${id} status changed to ${status}.`);
   }, [logAudit]);
 
+  // Fleet Management (Procurement & Logistics sub-section)
+  const addVehicle = useCallback((vehicleData: Omit<Vehicle, 'id' | 'createdAt'>): Vehicle => {
+    const newVehicle: Vehicle = {
+      ...vehicleData,
+      id: `veh-${Date.now()}`,
+      createdAt: new Date().toISOString()
+    };
+    setVehicles(prev => [newVehicle, ...prev]);
+    logAudit('VEHICLE_REGISTERED', 'Procurement & Fleet', `Registered new fleet vehicle ${newVehicle.make} ${newVehicle.model} (${newVehicle.regNumber}) - Status: ${newVehicle.status}.`);
+    return newVehicle;
+  }, [logAudit]);
+
+  const updateVehicle = useCallback((id: string, updates: Partial<Vehicle>) => {
+    setVehicles(prev => prev.map(v => v.id === id ? { ...v, ...updates } : v));
+    logAudit('VEHICLE_UPDATED', 'Procurement & Fleet', `Updated vehicle details for #${id}.`);
+  }, [logAudit]);
+
+  const deleteVehicle = useCallback((id: string) => {
+    const target = vehicles.find(v => v.id === id);
+    setVehicles(prev => prev.filter(v => v.id !== id));
+    logAudit('VEHICLE_DELETED', 'Procurement & Fleet', `Removed fleet vehicle ${target?.regNumber || id} from registry.`, 'WARNING');
+  }, [vehicles, logAudit]);
+
+  const addDriver = useCallback((driverData: Omit<Driver, 'id' | 'createdAt'>): Driver => {
+    const newDriver: Driver = {
+      ...driverData,
+      id: `drv-${Date.now()}`,
+      totalTripsCompleted: driverData.totalTripsCompleted || 0,
+      createdAt: new Date().toISOString()
+    };
+    setDrivers(prev => [newDriver, ...prev]);
+    logAudit('DRIVER_REGISTERED', 'Procurement & Fleet', `Registered driver ${newDriver.fullName} (License: ${newDriver.licenseNumber}).`);
+    return newDriver;
+  }, [logAudit]);
+
+  const updateDriver = useCallback((id: string, updates: Partial<Driver>) => {
+    setDrivers(prev => prev.map(d => d.id === id ? { ...d, ...updates } : d));
+    logAudit('DRIVER_UPDATED', 'Procurement & Fleet', `Updated driver profile for #${id}.`);
+  }, [logAudit]);
+
+  const deleteDriver = useCallback((id: string) => {
+    const target = drivers.find(d => d.id === id);
+    setDrivers(prev => prev.filter(d => d.id !== id));
+    logAudit('DRIVER_DELETED', 'Procurement & Fleet', `Removed driver ${target?.fullName || id} from registry.`, 'WARNING');
+  }, [drivers, logAudit]);
+
+  const addTripLog = useCallback((tripData: Omit<TripLog, 'id' | 'tripCode' | 'loggedAt' | 'totalMileage'> & { mileageIn?: number; totalMileage?: number; loggedBy?: string }): TripLog => {
+    const count = tripLogs.length + 1;
+    const mileageInVal = Number(tripData.mileageIn) || 0;
+    const mileageOutVal = Number(tripData.mileageOut) || 0;
+    const calculatedTotal = (mileageInVal > mileageOutVal) ? (mileageInVal - mileageOutVal) : (tripData.totalMileage || 0);
+
+    const newTrip: TripLog = {
+      ...tripData,
+      id: `trip-${Date.now()}`,
+      tripCode: `TRIP-2026-${String(100 + count).padStart(4, '0')}`,
+      mileageIn: mileageInVal,
+      totalMileage: calculatedTotal,
+      loggedAt: new Date().toISOString(),
+      loggedBy: tripData.loggedBy || `${currentUser.name} (${currentUser.role})`,
+      loggedByEmail: currentUser.email,
+      loggedByRole: currentUser.role,
+      verifiedBySupervisor: true
+    };
+
+    setTripLogs(prev => [newTrip, ...prev]);
+
+    // Update vehicle's mileage and status
+    setVehicles(prev => prev.map(v => {
+      if (v.id === tripData.vehicleId || v.regNumber === tripData.regNumber) {
+        return {
+          ...v,
+          currentMileage: mileageInVal > v.currentMileage ? mileageInVal : (mileageOutVal > v.currentMileage ? mileageOutVal : v.currentMileage),
+          status: newTrip.status === 'Ongoing' ? 'assigned' : v.status
+        };
+      }
+      return v;
+    }));
+
+    // If completed, increment driver's total trips
+    if (newTrip.status === 'Completed' && tripData.driverId) {
+      setDrivers(prev => prev.map(d => d.id === tripData.driverId ? { ...d, totalTripsCompleted: (d.totalTripsCompleted || 0) + 1 } : d));
+    }
+
+    logAudit('TRIP_LOGGED', 'Procurement & Fleet', `Logged vehicle trip ${newTrip.tripCode} for ${newTrip.regNumber} (${newTrip.driverName}) -> ${newTrip.destination} [Total: ${calculatedTotal} km]. Logged by ${newTrip.loggedBy}.`);
+    return newTrip;
+  }, [tripLogs.length, currentUser, logAudit]);
+
+  const updateTripLog = useCallback((id: string, updates: Partial<TripLog>) => {
+    setTripLogs(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const mileageOut = updates.mileageOut !== undefined ? Number(updates.mileageOut) : t.mileageOut;
+      const mileageIn = updates.mileageIn !== undefined ? Number(updates.mileageIn) : (t.mileageIn || 0);
+      const totalMileage = (mileageIn > mileageOut) ? (mileageIn - mileageOut) : (updates.totalMileage !== undefined ? updates.totalMileage : t.totalMileage);
+
+      return {
+        ...t,
+        ...updates,
+        mileageOut,
+        mileageIn,
+        totalMileage,
+        updatedAt: new Date().toISOString(),
+        updatedBy: `${currentUser.name} (${currentUser.role})`
+      };
+    }));
+    logAudit('TRIP_UPDATED', 'Procurement & Fleet', `Updated trip log record #${id}. Audited by ${currentUser.name}.`);
+  }, [currentUser, logAudit]);
+
+  const completeTripLog = useCallback((id: string, mileageIn: number, fuelGaugeIn: string, returnDateTime?: string, remarks?: string) => {
+    let completedTrip: TripLog | undefined;
+
+    setTripLogs(prev => prev.map(t => {
+      if (t.id !== id) return t;
+      const totalMileage = Number(mileageIn) > Number(t.mileageOut) ? (Number(mileageIn) - Number(t.mileageOut)) : 0;
+      const updated: TripLog = {
+        ...t,
+        status: 'Completed',
+        mileageIn: Number(mileageIn),
+        fuelGaugeIn: fuelGaugeIn || t.fuelGaugeIn || '',
+        returnDateTime: returnDateTime || new Date().toISOString().slice(0, 16),
+        totalMileage,
+        remarks: remarks !== undefined ? remarks : t.remarks,
+        updatedAt: new Date().toISOString(),
+        updatedBy: `${currentUser.name} (${currentUser.role})`
+      };
+      completedTrip = updated;
+      return updated;
+    }));
+
+    if (completedTrip) {
+      const trip = completedTrip as TripLog;
+      // Update vehicle current mileage and mark parked/available
+      setVehicles(prev => prev.map(v => {
+        if (v.id === trip.vehicleId || v.regNumber === trip.regNumber) {
+          return {
+            ...v,
+            currentMileage: Math.max(v.currentMileage, Number(mileageIn)),
+            status: v.status === 'assigned' ? 'parked' : v.status
+          };
+        }
+        return v;
+      }));
+
+      // Increment driver's completed trips
+      if (trip.driverId) {
+        setDrivers(prev => prev.map(d => d.id === trip.driverId ? { ...d, totalTripsCompleted: (d.totalTripsCompleted || 0) + 1 } : d));
+      }
+
+      logAudit('TRIP_COMPLETED', 'Procurement & Fleet', `Trip ${trip.tripCode} marked Completed. Mileage In: ${mileageIn}km (Total Traveled: ${trip.totalMileage}km). Audited by ${currentUser.name}.`);
+    }
+  }, [currentUser, logAudit]);
+
+  const deleteTripLog = useCallback((id: string) => {
+    const target = tripLogs.find(t => t.id === id);
+    setTripLogs(prev => prev.filter(t => t.id !== id));
+    logAudit('TRIP_DELETED', 'Procurement & Fleet', `Deleted trip log record ${target?.tripCode || id}.`, 'WARNING');
+  }, [tripLogs, logAudit]);
+
   // Sales & CRM Deals
   const addDeal = useCallback((deal: Omit<Deal, 'id' | 'lastActivity'>): Deal => {
     const newDeal: Deal = {
@@ -1424,6 +1677,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     itSystems,
     itDevices,
     itLicenses,
+    vehicles,
+    drivers,
+    tripLogs,
     currentlyInsideEmployees,
     currentlyInsideCount,
     todayPresentCount,
@@ -1459,6 +1715,16 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateInvoiceStatus,
     addPurchaseOrder,
     updatePurchaseOrderStatus,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
+    addDriver,
+    updateDriver,
+    deleteDriver,
+    addTripLog,
+    updateTripLog,
+    completeTripLog,
+    deleteTripLog,
     addDeal,
     updateDealStage,
     addNote,
@@ -1476,10 +1742,16 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateSettings,
     logAudit,
     resetAllDataToDefault,
+    theme,
+    setTheme,
+    toggleTheme,
     isMobileNavOpen,
     setIsMobileNavOpen,
     isQRScannerOpen,
     setIsQRScannerOpen,
+    isPWAInstallModalOpen,
+    setIsPWAInstallModalOpen,
+    isStandaloneMode,
     selectedEmployeeForBadge,
     setSelectedEmployeeForBadge,
     selectedPayslipForModal,

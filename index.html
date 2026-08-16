@@ -8,9 +8,14 @@
     
     <!-- PWA Manifest & App Icons -->
     <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
+    <link rel="mask-icon" href="/icons/icon-512x512.png" color="#2563eb" />
     
     <!-- PWA Theme Meta -->
     <meta name="theme-color" content="#0a0a0a" />
@@ -31,16 +36,20 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register Service Worker for Offline-First PWA capabilities
-      if ('serviceWorker' in navigator) {
+      // Register Service Worker for Offline-First PWA capabilities safely
+      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('[PWA] ServiceWorker registered with scope:', registration.scope);
-            })
-            .catch(err => {
-              console.warn('[PWA] ServiceWorker registration failed:', err);
-            });
+          try {
+            navigator.serviceWorker.register('/sw.js')
+              .then(registration => {
+                // Service worker active
+              })
+              .catch(() => {
+                // Silently swallow in restricted iframe contexts
+              });
+          } catch (e) {
+            // Silently handled
+          }
         });
       }
     </script>
