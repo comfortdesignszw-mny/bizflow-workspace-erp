@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import {
   Truck,
@@ -32,10 +32,29 @@ export const ProcurementModule: React.FC = () => {
     addPurchaseOrder,
     updatePurchaseOrderStatus,
     settings,
-    currentUser
+    currentUser,
+    activeModule,
+    procurementTab,
+    setProcurementTab
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'logistics' | 'fleet'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'vendors' | 'logistics' | 'fleet'>(() => {
+    if (activeModule === 'fleet') return 'fleet';
+    return procurementTab || 'orders';
+  });
+
+  useEffect(() => {
+    if (activeModule === 'fleet') {
+      setActiveTab('fleet');
+    } else if (procurementTab && procurementTab !== activeTab) {
+      setActiveTab(procurementTab);
+    }
+  }, [activeModule, procurementTab]);
+
+  const handleTabChange = (tab: 'orders' | 'vendors' | 'logistics' | 'fleet') => {
+    setActiveTab(tab);
+    setProcurementTab(tab);
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [isAddPOModalOpen, setIsAddPOModalOpen] = useState(false);
@@ -181,51 +200,54 @@ export const ProcurementModule: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-neutral-800 pb-2">
+      <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 border-b border-neutral-800 pb-3 w-full">
         <button
-          onClick={() => setActiveTab('orders')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+          onClick={() => handleTabChange('orders')}
+          className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
             activeTab === 'orders'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
           }`}
+          id="tab-procurement-orders"
         >
-          <Package className="w-3.5 h-3.5" />
-          <span>Purchase Orders & Requisitions</span>
+          <Package className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+          <span className="truncate">Orders & POs</span>
         </button>
         <button
-          onClick={() => setActiveTab('vendors')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+          onClick={() => handleTabChange('vendors')}
+          className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
             activeTab === 'vendors'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
           }`}
+          id="tab-procurement-vendors"
         >
-          <Building className="w-3.5 h-3.5" />
-          <span>Vendor Directory</span>
+          <Building className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+          <span className="truncate">Vendors</span>
         </button>
         <button
-          onClick={() => setActiveTab('logistics')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+          onClick={() => handleTabChange('logistics')}
+          className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
             activeTab === 'logistics'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
           }`}
+          id="tab-procurement-logistics"
         >
-          <Truck className="w-3.5 h-3.5" />
-          <span>Freight & Tracking</span>
+          <Truck className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+          <span className="truncate">Freight Tracking</span>
         </button>
         <button
-          onClick={() => setActiveTab('fleet')}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
+          onClick={() => handleTabChange('fleet')}
+          className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-2 cursor-pointer ${
             activeTab === 'fleet'
               ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-              : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+              : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
           }`}
           id="tab-procurement-fleet"
         >
-          <Car className="w-3.5 h-3.5" />
-          <span>Fleet & Vehicles</span>
+          <Car className="w-4 h-4 sm:w-3.5 sm:h-3.5 shrink-0" />
+          <span className="truncate">Fleet & Vehicles</span>
         </button>
       </div>
 

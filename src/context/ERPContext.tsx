@@ -181,6 +181,8 @@ interface ERPContextType {
   updateInvoiceStatus: (id: string, status: Invoice['status']) => void;
 
   // Actions: Procurement & Fleet
+  procurementTab: 'orders' | 'vendors' | 'logistics' | 'fleet';
+  setProcurementTab: (tab: 'orders' | 'vendors' | 'logistics' | 'fleet') => void;
   addPurchaseOrder: (po: Omit<PurchaseOrder, 'id' | 'poNumber' | 'orderDate'>) => PurchaseOrder;
   updatePurchaseOrderStatus: (id: string, status: PurchaseOrderStatus) => void;
   addVehicle: (vehicle: Omit<Vehicle, 'id' | 'createdAt'>) => Vehicle;
@@ -298,6 +300,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getLocalSandbox('vehicles', INITIAL_VEHICLES));
   const [drivers, setDrivers] = useState<Driver[]>(() => getLocalSandbox('drivers', INITIAL_DRIVERS));
   const [tripLogs, setTripLogs] = useState<TripLog[]>(() => getLocalSandbox('trip_logs', INITIAL_TRIP_LOGS));
+
+  const [procurementTab, setProcurementTab] = useState<'orders' | 'vendors' | 'logistics' | 'fleet'>('orders');
 
   // Modal states & Navigation
   const [theme, setThemeState] = useState<'dark' | 'light'>(() => {
@@ -1715,6 +1719,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     updateInvoiceStatus,
     addPurchaseOrder,
     updatePurchaseOrderStatus,
+    procurementTab,
+    setProcurementTab,
     addVehicle,
     updateVehicle,
     deleteVehicle,

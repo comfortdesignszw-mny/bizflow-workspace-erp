@@ -25,7 +25,9 @@ import {
   Terminal,
   Shield,
   Activity,
-  X
+  X,
+  Car,
+  Building
 } from 'lucide-react';
 
 interface SubNavItem {
@@ -48,6 +50,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
     applicants,
     tasks,
     purchaseOrders,
+    vehicles,
     deals,
     itTickets,
     isOnline,
@@ -56,15 +59,21 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
     installPWA,
     isStandaloneMode,
     isMobileNavOpen,
-    setIsMobileNavOpen
+    setIsMobileNavOpen,
+    procurementTab,
+    setProcurementTab
   } = useERP();
 
   const [hrExpanded, setHrExpanded] = useState(false);
+  const [procurementExpanded, setProcurementExpanded] = useState(false);
 
   // If active module is an HR subitem, keep HR accordion open when expanded
   useEffect(() => {
     if (['recruitment', 'payroll', 'employees', 'access'].includes(activeModule)) {
       setHrExpanded(true);
+    }
+    if (['procurement', 'fleet'].includes(activeModule)) {
+      setProcurementExpanded(true);
     }
   }, [activeModule]);
 
@@ -73,13 +82,55 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
   const pendingTasksCount = tasks.filter(t => t.status !== 'Done').length;
   const pendingPOCount = purchaseOrders.filter(po => po.status === 'Requested' || po.status === 'Ordered').length;
   const openITTicketsCount = itTickets.filter(t => t.status !== 'Resolved' && t.status !== 'Closed').length;
+  const totalVehiclesCount = vehicles.length;
 
-  const handleNavClick = (moduleId: string) => {
-    setActiveModule(moduleId);
+  const handleNavClick = (moduleId: string, targetProcurementTab?: 'orders' | 'vendors' | 'logistics' | 'fleet') => {
+    if (moduleId === 'procurement' && targetProcurementTab) {
+      setProcurementTab(targetProcurementTab);
+      setActiveModule('procurement');
+    } else if (moduleId === 'fleet') {
+      setProcurementTab('fleet');
+      setActiveModule('procurement');
+    } else {
+      setActiveModule(moduleId);
+    }
     // On mobile view: collapse the entire navbar and its icons completely off-screen
     // to give an uncompromised full-screen view of the selected module
     setIsMobileNavOpen(false);
   };
+
+  const procurementSubItems: Array<{
+    id: 'orders' | 'vendors' | 'logistics' | 'fleet';
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: string | number;
+    badgeColor?: string;
+  }> = [
+    {
+      id: 'orders',
+      label: 'Purchase Orders',
+      icon: Package,
+      badge: pendingPOCount > 0 ? pendingPOCount : undefined,
+      badgeColor: 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+    },
+    {
+      id: 'vendors',
+      label: 'Vendor Directory',
+      icon: Building
+    },
+    {
+      id: 'logistics',
+      label: 'Freight Tracking',
+      icon: Truck
+    },
+    {
+      id: 'fleet',
+      label: 'Fleet & Vehicles',
+      icon: Car,
+      badge: `${totalVehiclesCount} Fleet`,
+      badgeColor: 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+    }
+  ];
 
   const hrSubItems: SubNavItem[] = [
     {
@@ -292,30 +343,78 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
               )}
             </button>
 
-            {/* Procurement and Logistics */}
-            <button
-              onClick={() => handleNavClick('procurement')}
-              className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all group relative cursor-pointer ${
-                activeModule === 'procurement'
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-semibold'
-                  : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-900'
-              }`}
-              title={isCollapsed ? 'Procurement & Logistics' : undefined}
-              id="nav-procurement"
-            >
-              <Truck className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span className="truncate flex-1 text-left">Procurement & Logistics</span>}
-              {!isCollapsed && pendingPOCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                  {pendingPOCount}
-                </span>
+            {/* Procurement and Logistics Accordion with Sub-navs */}
+            <div className="space-y-0.5">
+              <button
+                onClick={() => {
+                  if (isCollapsed) {
+                    setIsCollapsed(false);
+                    setProcurementExpanded(true);
+                  } else {
+                    setProcurementExpanded(!procurementExpanded);
+                  }
+                }}
+                className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-xs font-medium transition-all group cursor-pointer ${
+                  activeModule === 'procurement' || activeModule === 'fleet'
+                    ? 'text-purple-400 bg-purple-500/10'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+                }`}
+                title={isCollapsed ? 'Procurement & Logistics' : undefined}
+                id="nav-procurement-accordion"
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <Truck className="w-4 h-4 shrink-0 text-purple-400" />
+                  {!isCollapsed && <span className="font-semibold text-white">Procurement & Logistics</span>}
+                </div>
+                {!isCollapsed && (
+                  <div className="flex items-center gap-1.5">
+                    {pendingPOCount > 0 && (
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                        {pendingPOCount}
+                      </span>
+                    )}
+                    <ChevronDown className={`w-3.5 h-3.5 text-neutral-500 transition-transform ${procurementExpanded ? 'rotate-180' : ''}`} />
+                  </div>
+                )}
+                {isCollapsed && (
+                  <span className="absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-xs rounded-lg shadow-xl border border-neutral-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
+                    Procurement & Logistics
+                  </span>
+                )}
+              </button>
+
+              {/* Sub-nav items for Procurement */}
+              {procurementExpanded && !isCollapsed && (
+                <div className="pl-3 pr-1 py-1 space-y-1 border-l-2 border-purple-500/30 ml-3.5">
+                  {procurementSubItems.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isSubActive = (activeModule === 'procurement' || activeModule === 'fleet') && (procurementTab === sub.id || (activeModule === 'fleet' && sub.id === 'fleet'));
+                    return (
+                      <button
+                        key={sub.id}
+                        onClick={() => handleNavClick('procurement', sub.id)}
+                        className={`w-full flex items-center justify-between px-2 py-1.5 rounded-lg text-xs transition-all cursor-pointer ${
+                          isSubActive
+                            ? 'bg-purple-600 text-white font-medium shadow-xs shadow-purple-600/20'
+                            : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-900/60'
+                        }`}
+                        id={`nav-sub-procurement-${sub.id}`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <SubIcon className="w-3.5 h-3.5 shrink-0" />
+                          <span className="truncate">{sub.label}</span>
+                        </div>
+                        {sub.badge !== undefined && (
+                          <span className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${sub.badgeColor || 'bg-neutral-800 text-neutral-300'}`}>
+                            {sub.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               )}
-              {isCollapsed && (
-                <span className="absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-xs rounded-lg shadow-xl border border-neutral-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                  Procurement & Logistics
-                </span>
-              )}
-            </button>
+            </div>
 
             {/* IT Department (Customized for IT Issues, Server Health, Helpdesk & MDM) */}
             <button

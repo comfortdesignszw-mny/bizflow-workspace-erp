@@ -45,6 +45,7 @@ const ERPAppContent: React.FC = () => {
       case 'finance':
         return <FinanceModule />;
       case 'procurement':
+      case 'fleet':
         return <ProcurementModule />;
       case 'it-department':
       case 'projects':

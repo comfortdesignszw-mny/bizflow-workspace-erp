@@ -56,7 +56,8 @@ export const Header: React.FC = () => {
     setIsMobileNavOpen,
     theme,
     toggleTheme,
-    activeModule
+    activeModule,
+    setProcurementTab
   } = useERP();
 
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
@@ -178,7 +179,15 @@ export const Header: React.FC = () => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     const q = searchQuery.toLowerCase();
-    if (q.includes('it') || q.includes('ticket') || q.includes('server') || q.includes('laptop') || q.includes('wifi') || q.includes('vpn') || q.includes('mdm') || q.includes('license')) setActiveModule('it-department');
+    if (q.includes('fleet') || q.includes('vehicle') || q.includes('car') || q.includes('driver') || q.includes('trip')) {
+      setActiveModule('procurement');
+      setProcurementTab('fleet');
+    }
+    else if (q.includes('procure') || q.includes('vendor') || q.includes('supplier') || q.includes('freight') || q.includes('shipping') || q.includes('po ')) {
+      setActiveModule('procurement');
+      setProcurementTab('orders');
+    }
+    else if (q.includes('it') || q.includes('ticket') || q.includes('server') || q.includes('laptop') || q.includes('wifi') || q.includes('vpn') || q.includes('mdm') || q.includes('license')) setActiveModule('it-department');
     else if (q.includes('pay') || q.includes('salary')) setActiveModule('payroll');
     else if (q.includes('att') || q.includes('scan') || q.includes('gate') || q.includes('time')) setActiveModule('access');
     else if (q.includes('rec') || q.includes('job') || q.includes('hire') || q.includes('cv')) setActiveModule('recruitment');

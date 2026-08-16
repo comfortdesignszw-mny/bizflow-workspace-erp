@@ -749,57 +749,57 @@ export const FleetManagement: React.FC = () => {
       </div>
 
       {/* Fleet Sub-navigation Tabs & Quick Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-neutral-800 pb-3">
-        <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 border-b border-neutral-800 pb-3">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
           <button
             onClick={() => setActiveSubTab('inventory')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'inventory'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
             }`}
             id="fleet-subtab-inventory"
           >
-            <Car className="w-3.5 h-3.5" />
-            <span>Vehicle Inventory</span>
+            <Car className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Vehicles</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">{vehicles.length}</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('drivers')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'drivers'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
             }`}
             id="fleet-subtab-drivers"
           >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Drivers Register</span>
+            <UserCheck className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Drivers</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">{drivers.length}</span>
           </button>
 
           <button
             onClick={() => setActiveSubTab('trips')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+            className={`col-span-2 sm:col-span-1 px-3 sm:px-4 py-2.5 sm:py-2 rounded-xl text-xs font-semibold transition-all flex items-center justify-center sm:justify-start gap-1.5 sm:gap-2 cursor-pointer ${
               activeSubTab === 'trips'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/20'
-                : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                : 'text-neutral-400 hover:text-white hover:bg-neutral-900 bg-neutral-900/60 sm:bg-transparent'
             }`}
             id="fleet-subtab-trips"
           >
-            <ClipboardList className="w-3.5 h-3.5" />
-            <span>Trip Log Register</span>
+            <ClipboardList className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">Trip Log Register</span>
             <span className="ml-1 px-1.5 py-0.2 rounded-full bg-black/30 text-[10px]">{tripLogs.length}</span>
           </button>
         </div>
 
         {/* Dynamic Action Buttons */}
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
           {activeSubTab === 'inventory' && (
             <button
               onClick={handleOpenAddVehicle}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
               id="btn-add-vehicle"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -810,7 +810,7 @@ export const FleetManagement: React.FC = () => {
           {activeSubTab === 'drivers' && (
             <button
               onClick={handleOpenAddDriver}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+              className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
               id="btn-add-driver"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -819,34 +819,34 @@ export const FleetManagement: React.FC = () => {
           )}
 
           {activeSubTab === 'trips' && (
-            <div className="flex items-center gap-2">
+            <div className="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1 px-2.5 sm:px-3 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                 title="Export trip logs as CSV spreadsheet"
                 id="btn-export-trips-csv"
               >
                 <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Export CSV</span>
+                <span className="hidden sm:inline">Export </span>CSV
               </button>
 
               <button
                 onClick={handleExportPDF}
-                className="flex items-center gap-1.5 px-3 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1 px-2.5 sm:px-3 py-2 bg-neutral-900 hover:bg-neutral-800 text-neutral-300 hover:text-white border border-neutral-700/80 rounded-xl text-xs font-semibold transition-all cursor-pointer"
                 title="Export official trip log report as PDF"
                 id="btn-export-trips-pdf"
               >
                 <FileText className="w-3.5 h-3.5 text-red-400" />
-                <span>Export PDF</span>
+                <span className="hidden sm:inline">Export </span>PDF
               </button>
 
               <button
                 onClick={() => handleOpenAddTrip()}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
+                className="flex items-center justify-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold shadow-md shadow-purple-600/20 transition-all cursor-pointer"
                 id="btn-log-trip"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Log Vehicle Trip</span>
+                <span className="truncate">Log Trip</span>
               </button>
             </div>
           )}
