@@ -29,6 +29,7 @@ import {
   BarChart3,
   Activity
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import {
   AreaChart,
   Area,
@@ -106,11 +107,11 @@ export const DashboardModule: React.FC = () => {
   const activeJobsCount = jobOpenings.filter(j => j.status === 'Active').length;
   const activeProjectsCount = projects.filter(p => p.status === 'In Progress').length;
   const latestPayroll = payrollRuns[0];
-  const monthlyPayrollBurn = latestPayroll ? latestPayroll.totalGross : 98350;
+  const monthlyPayrollBurn = latestPayroll ? latestPayroll.totalGross : 0;
 
   const onTimeCount = Math.max(0, todayPresentCount - todayLateCount);
   const pendingArrivalCount = Math.max(0, totalEmployees - todayPresentCount);
-  const punctualityRate = totalEmployees > 0 ? Math.round((onTimeCount / totalEmployees) * 100) : 90;
+  const punctualityRate = totalEmployees > 0 ? Math.round((onTimeCount / totalEmployees) * 100) : 0;
 
   // 1. Data for 'Attendance Today' Recharts KPI Widget
   const attendanceKpiData = useMemo(() => [
@@ -779,25 +780,36 @@ export const DashboardModule: React.FC = () => {
           </div>
 
           <div className="space-y-2.5 overflow-y-auto max-h-72">
-            {recentScans.map((log) => (
-              <div key={log.id} className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2.5">
-                  <img src={log.avatar} alt={log.employeeName} className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
-                  <div>
-                    <p className="font-semibold text-white truncate max-w-[130px]">{log.employeeName}</p>
-                    <p className="text-[10px] text-neutral-400">{(log.gate || 'Main').split(' ')[0]} Gate</p>
+            {recentScans.length > 0 ? (
+              recentScans.map((log) => (
+                <div key={log.id} className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <img src={log.avatar} alt={log.employeeName} className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
+                    <div>
+                      <p className="font-semibold text-white truncate max-w-[130px]">{log.employeeName}</p>
+                      <p className="text-[10px] text-neutral-400">{(log.gate || 'Main').split(' ')[0]} Gate</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${log.scanType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                      {log.scanType}
+                    </span>
+                    <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${log.scanType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                    {log.scanType}
-                  </span>
-                  <p className="text-[10px] text-neutral-500 font-mono mt-0.5">
-                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <EmptyState
+                icon={Scan}
+                title="No Recent Scans"
+                description="Biometric badge terminal and QR validations will stream here in real time."
+                actionText="Open QR Terminal"
+                onAction={() => setIsQRScannerOpen(true)}
+                compact
+              />
+            )}
           </div>
 
           <button
@@ -818,23 +830,34 @@ export const DashboardModule: React.FC = () => {
           <p className="text-xs text-neutral-400">Headcount distribution across company units</p>
 
           <div className="space-y-3 pt-2">
-            {deptData.map((d, idx) => {
-              const pct = Math.round((d.count / (totalEmployees || 1)) * 100);
-              return (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-neutral-300">{d.name}</span>
-                    <span className="font-mono text-neutral-400">{d.count} staff ({pct}%)</span>
+            {totalEmployees > 0 ? (
+              deptData.map((d, idx) => {
+                const pct = Math.round((d.count / (totalEmployees || 1)) * 100);
+                return (
+                  <div key={idx} className="space-y-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-neutral-300">{d.name}</span>
+                      <span className="font-mono text-neutral-400">{d.count} staff ({pct}%)</span>
+                    </div>
+                    <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, backgroundColor: d.fill }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%`, backgroundColor: d.fill }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })
+            ) : (
+              <EmptyState
+                icon={Users}
+                title="No Staff Enrolled"
+                description="Register staff members to visualize departmental headcount distribution."
+                actionText="+ Add Staff"
+                onAction={() => setActiveModule('employees')}
+                compact
+              />
+            )}
           </div>
         </div>
 
@@ -854,28 +877,39 @@ export const DashboardModule: React.FC = () => {
           </div>
 
           <div className="space-y-3">
-            {projects.slice(0, 3).map((proj) => (
-              <div key={proj.id} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div>
-                    <span className="text-[10px] font-mono text-blue-400 font-bold">{proj.code}</span>
-                    <h4 className="text-xs sm:text-sm font-bold text-white">{proj.title}</h4>
+            {projects.length > 0 ? (
+              projects.slice(0, 3).map((proj) => (
+                <div key={proj.id} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-mono text-blue-400 font-bold">{proj.code}</span>
+                      <h4 className="text-xs sm:text-sm font-bold text-white">{proj.title}</h4>
+                    </div>
+                    <div className="flex items-center gap-3 text-xs font-mono">
+                      <span className="text-neutral-400">Burn: <strong className="text-white">${proj.spent.toLocaleString()}</strong> / ${proj.budget.toLocaleString()}</span>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300">
+                        {proj.progressPercent}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs font-mono">
-                    <span className="text-neutral-400">Burn: <strong className="text-white">${proj.spent.toLocaleString()}</strong> / ${proj.budget.toLocaleString()}</span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-300">
-                      {proj.progressPercent}%
-                    </span>
+                  <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+                      style={{ width: `${proj.progressPercent}%` }}
+                    />
                   </div>
                 </div>
-                <div className="h-2 w-full bg-neutral-800 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
-                    style={{ width: `${proj.progressPercent}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <EmptyState
+                icon={Layers}
+                title="No Active Projects"
+                description="Create enterprise initiatives and track budget allocations across sprint milestones."
+                actionText="+ Create Project"
+                onAction={() => setActiveModule('projects')}
+                compact
+              />
+            )}
           </div>
         </div>
       </div>

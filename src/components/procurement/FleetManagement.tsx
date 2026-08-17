@@ -39,6 +39,7 @@ import {
 import { Vehicle, Driver, TripLog, VehicleStatus, VehicleCondition } from '../../types/erp';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { EmptyState } from '../common/EmptyState';
 
 export const FleetManagement: React.FC = () => {
   const {
@@ -1011,16 +1012,13 @@ export const FleetManagement: React.FC = () => {
           </div>
 
           {filteredVehicles.length === 0 && (
-            <div className="p-12 text-center rounded-2xl bg-neutral-900/40 border border-neutral-800 text-neutral-500">
-              <Car className="w-10 h-10 mx-auto mb-2 text-neutral-600" />
-              <p className="text-sm">No vehicles match your search and filter criteria.</p>
-              <button
-                onClick={handleOpenAddVehicle}
-                className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold"
-              >
-                <Plus className="w-3 h-3" /> Add Vehicle
-              </button>
-            </div>
+            <EmptyState
+              icon={Car}
+              title={vehicles.length === 0 ? "No Vehicles in Fleet" : "No Vehicles Found"}
+              description={vehicles.length === 0 ? "Register company vehicles, assign dedicated drivers, monitor odometer logs, and track vehicle service intervals." : "No vehicles match your search and filter criteria."}
+              actionText={vehicles.length === 0 ? "+ Add Vehicle" : "Clear Filters"}
+              onAction={vehicles.length === 0 ? handleOpenAddVehicle : () => { setVehicleSearch(''); setVehicleStatusFilter('ALL'); setVehicleTypeFilter('ALL'); }}
+            />
           )}
         </div>
       )}
@@ -1185,16 +1183,13 @@ export const FleetManagement: React.FC = () => {
           </div>
 
           {filteredDrivers.length === 0 && (
-            <div className="p-12 text-center rounded-2xl bg-neutral-900/40 border border-neutral-800 text-neutral-500">
-              <UserCheck className="w-10 h-10 mx-auto mb-2 text-neutral-600" />
-              <p className="text-sm">No drivers match your search and filter criteria.</p>
-              <button
-                onClick={handleOpenAddDriver}
-                className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold"
-              >
-                <Plus className="w-3 h-3" /> Register Driver
-              </button>
-            </div>
+            <EmptyState
+              icon={UserCheck}
+              title={drivers.length === 0 ? "No Registered Drivers" : "No Drivers Found"}
+              description={drivers.length === 0 ? "Maintain active personnel profiles, valid driver license numbers, vehicle assignments, and contact channels." : "No drivers match your search and filter criteria."}
+              actionText={drivers.length === 0 ? "+ Register Driver" : "Clear Filters"}
+              onAction={drivers.length === 0 ? handleOpenAddDriver : () => { setDriverSearch(''); setDriverStatusFilter('ALL'); }}
+            />
           )}
         </div>
       )}
@@ -1401,15 +1396,14 @@ export const FleetManagement: React.FC = () => {
             </div>
 
             {filteredTripLogs.length === 0 && (
-              <div className="p-12 text-center text-neutral-500">
-                <ClipboardList className="w-10 h-10 mx-auto mb-2 text-neutral-600" />
-                <p className="text-sm">No trip logs found matching the filter criteria.</p>
-                <button
-                  onClick={() => handleOpenAddTrip()}
-                  className="mt-3 inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg text-xs font-semibold"
-                >
-                  <Plus className="w-3 h-3" /> Log First Trip
-                </button>
+              <div className="p-4">
+                <EmptyState
+                  icon={ClipboardList}
+                  title={tripLogs.length === 0 ? "No Trip Logs Recorded" : "No Trip Logs Found"}
+                  description={tripLogs.length === 0 ? "Dispatch trips, record driver odometer readings and fuel levels, track destinations, and produce audited trip sheets." : "No trip logs match your search and filter criteria."}
+                  actionText={tripLogs.length === 0 ? "+ Log First Trip" : "Clear Filters"}
+                  onAction={tripLogs.length === 0 ? () => handleOpenAddTrip() : () => { setTripSearch(''); setTripStatusFilter('ALL'); setTripDateFilter(''); }}
+                />
               </div>
             )}
           </div>

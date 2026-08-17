@@ -17,6 +17,7 @@ import {
   CreditCard
 } from 'lucide-react';
 import { ExpenseClaim, Invoice } from '../../types/erp';
+import { EmptyState } from '../common/EmptyState';
 
 export const FinanceModule: React.FC = () => {
   const {
@@ -170,145 +171,165 @@ export const FinanceModule: React.FC = () => {
 
       {/* Tab 1: Invoices */}
       {activeTab === 'invoices' && (
-        <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
-                <th className="py-3 px-4">Invoice #</th>
-                <th className="py-3 px-4">Client</th>
-                <th className="py-3 px-3">Issue Date</th>
-                <th className="py-3 px-3">Due Date</th>
-                <th className="py-3 px-3">Amount</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800/60 font-mono">
-              {invoices.map((inv) => (
-                <tr key={inv.id} className="hover:bg-neutral-800/40 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-blue-400 text-xs">
-                    {inv.invoiceNumber}
-                  </td>
-                  <td className="py-3.5 px-4 font-sans font-medium text-white">
-                    {inv.clientName}
-                    <span className="block text-[10px] text-neutral-500 font-mono">{inv.clientEmail}</span>
-                  </td>
-                  <td className="py-3.5 px-3 text-neutral-400">
-                    {inv.issueDate}
-                  </td>
-                  <td className="py-3.5 px-3 text-neutral-400">
-                    {inv.dueDate}
-                  </td>
-                  <td className="py-3.5 px-3 font-bold text-white">
-                    ${inv.totalAmount.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-3 font-sans">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                      inv.status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                      inv.status === 'Sent' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                      'bg-amber-500/20 text-amber-400'
-                    }`}>
-                      {inv.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-sans">
-                    <div className="flex items-center justify-end gap-2">
-                      {inv.status !== 'Paid' && (
-                        <button
-                          onClick={() => updateInvoiceStatus(inv.id, 'Paid')}
-                          className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30"
-                        >
-                          Mark Paid
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setSelectedInvoiceForModal(inv)}
-                        className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-blue-300 font-medium text-xs flex items-center gap-1"
-                        title="Print / View Invoice"
-                      >
-                        <Printer className="w-3.5 h-3.5" />
-                        <span>Print</span>
-                      </button>
-                    </div>
-                  </td>
+        invoices.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No Client Invoices"
+            description="Generate B2B tax invoices, configure milestone billing line items, apply VAT/tax rates, and print or export customer PDF statements."
+            actionText="+ Create Tax Invoice"
+            onAction={() => setIsAddInvoiceOpen(true)}
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
+                  <th className="py-3 px-4">Invoice #</th>
+                  <th className="py-3 px-4">Client</th>
+                  <th className="py-3 px-3">Issue Date</th>
+                  <th className="py-3 px-3">Due Date</th>
+                  <th className="py-3 px-3">Amount</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-neutral-800/60 font-mono">
+                {invoices.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-neutral-800/40 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-blue-400 text-xs">
+                      {inv.invoiceNumber}
+                    </td>
+                    <td className="py-3.5 px-4 font-sans font-medium text-white">
+                      {inv.clientName}
+                      <span className="block text-[10px] text-neutral-500 font-mono">{inv.clientEmail}</span>
+                    </td>
+                    <td className="py-3.5 px-3 text-neutral-400">
+                      {inv.issueDate}
+                    </td>
+                    <td className="py-3.5 px-3 text-neutral-400">
+                      {inv.dueDate}
+                    </td>
+                    <td className="py-3.5 px-3 font-bold text-white">
+                      ${inv.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-3 font-sans">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                        inv.status === 'Paid' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        inv.status === 'Sent' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                        'bg-amber-500/20 text-amber-400'
+                      }`}>
+                        {inv.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-sans">
+                      <div className="flex items-center justify-end gap-2">
+                        {inv.status !== 'Paid' && (
+                          <button
+                            onClick={() => updateInvoiceStatus(inv.id, 'Paid')}
+                            className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 text-[10px] font-semibold border border-emerald-500/30"
+                          >
+                            Mark Paid
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setSelectedInvoiceForModal(inv)}
+                          className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-blue-400 hover:text-blue-300 font-medium text-xs flex items-center gap-1"
+                          title="Print / View Invoice"
+                        >
+                          <Printer className="w-3.5 h-3.5" />
+                          <span>Print</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* Tab 2: Expense Claims */}
       {activeTab === 'expenses' && (
-        <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
-                <th className="py-3 px-4">Claim ID</th>
-                <th className="py-3 px-4">Employee</th>
-                <th className="py-3 px-3">Category</th>
-                <th className="py-3 px-4">Merchant & Description</th>
-                <th className="py-3 px-3">Amount</th>
-                <th className="py-3 px-3">Status</th>
-                <th className="py-3 px-4 text-right">Approval Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800/60 font-mono">
-              {expenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-neutral-800/40 transition-colors">
-                  <td className="py-3.5 px-4 font-bold text-amber-400 text-xs">
-                    {exp.code}
-                  </td>
-                  <td className="py-3.5 px-4 font-sans font-medium text-white">
-                    {exp.employeeName}
-                    <span className="block text-[10px] text-neutral-500 font-mono">{exp.department}</span>
-                  </td>
-                  <td className="py-3.5 px-3 font-sans text-neutral-300">
-                    {exp.category}
-                  </td>
-                  <td className="py-3.5 px-4 font-sans text-neutral-300">
-                    <span className="font-semibold text-white block">{exp.merchant}</span>
-                    <span className="text-[11px] text-neutral-400">{exp.description}</span>
-                  </td>
-                  <td className="py-3.5 px-3 font-bold text-white">
-                    ${exp.amount.toLocaleString()}
-                  </td>
-                  <td className="py-3.5 px-3 font-sans">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                      exp.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                      exp.status === 'Pending' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                      'bg-red-500/20 text-red-400 border border-red-500/30'
-                    }`}>
-                      {exp.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-sans">
-                    {exp.status === 'Pending' ? (
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => updateExpenseStatus(exp.id, 'Approved')}
-                          className="p-1 rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30"
-                          title="Approve Reimbursement"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => updateExpenseStatus(exp.id, 'Rejected')}
-                          className="p-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30"
-                          title="Reject Claim"
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-[10px] text-neutral-500 font-mono">Reviewed</span>
-                    )}
-                  </td>
+        expenses.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="No Expense Claims"
+            description="Submit travel, client entertainment, training, software, and hardware expenses for fiscal verification and reimbursement."
+            actionText="+ Submit Expense Claim"
+            onAction={() => setIsAddExpenseOpen(true)}
+          />
+        ) : (
+          <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
+                  <th className="py-3 px-4">Claim ID</th>
+                  <th className="py-3 px-4">Employee</th>
+                  <th className="py-3 px-3">Category</th>
+                  <th className="py-3 px-4">Merchant & Description</th>
+                  <th className="py-3 px-3">Amount</th>
+                  <th className="py-3 px-3">Status</th>
+                  <th className="py-3 px-4 text-right">Approval Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-neutral-800/60 font-mono">
+                {expenses.map((exp) => (
+                  <tr key={exp.id} className="hover:bg-neutral-800/40 transition-colors">
+                    <td className="py-3.5 px-4 font-bold text-amber-400 text-xs">
+                      {exp.code}
+                    </td>
+                    <td className="py-3.5 px-4 font-sans font-medium text-white">
+                      {exp.employeeName}
+                      <span className="block text-[10px] text-neutral-500 font-mono">{exp.department}</span>
+                    </td>
+                    <td className="py-3.5 px-3 font-sans text-neutral-300">
+                      {exp.category}
+                    </td>
+                    <td className="py-3.5 px-4 font-sans text-neutral-300">
+                      <span className="font-semibold text-white block">{exp.merchant}</span>
+                      <span className="text-[11px] text-neutral-400">{exp.description}</span>
+                    </td>
+                    <td className="py-3.5 px-3 font-bold text-white">
+                      ${exp.amount.toLocaleString()}
+                    </td>
+                    <td className="py-3.5 px-3 font-sans">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                        exp.status === 'Approved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                        exp.status === 'Pending' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                        'bg-red-500/20 text-red-400 border border-red-500/30'
+                      }`}>
+                        {exp.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-sans">
+                      {exp.status === 'Pending' ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => updateExpenseStatus(exp.id, 'Approved')}
+                            className="p-1 rounded bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 border border-emerald-500/30"
+                            title="Approve Reimbursement"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => updateExpenseStatus(exp.id, 'Rejected')}
+                            className="p-1 rounded bg-red-600/20 text-red-400 hover:bg-red-600/30 border border-red-500/30"
+                            title="Reject Claim"
+                          >
+                            <XCircle className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-neutral-500 font-mono">Reviewed</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* Submit Expense Modal */}

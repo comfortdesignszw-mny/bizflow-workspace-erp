@@ -13,6 +13,7 @@ import { NewTicketModal } from './NewTicketModal';
 import { NewDeviceModal } from './NewDeviceModal';
 import { NewLicenseModal } from './NewLicenseModal';
 import { TicketDetailModal } from './TicketDetailModal';
+import { EmptyState } from '../common/EmptyState';
 import {
   Server,
   Laptop,
@@ -408,11 +409,13 @@ export const ITDepartmentModule: React.FC = () => {
           {/* Ticket Queue List */}
           <div className="space-y-2.5">
             {filteredTickets.length === 0 ? (
-              <div className="p-12 text-center bg-neutral-900/40 rounded-2xl border border-neutral-800">
-                <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto mb-2 opacity-60" />
-                <h3 className="text-sm font-bold text-white">No Tickets Match Your Filter</h3>
-                <p className="text-xs text-neutral-400 mt-1">All IT issues resolved or match query criteria.</p>
-              </div>
+              <EmptyState
+                icon={Terminal}
+                title={itTickets.length === 0 ? "No IT Incident Tickets" : "No Tickets Match Filter"}
+                description={itTickets.length === 0 ? "Log IT helpdesk issues, workstation repairs, network diagnostics, or software access requests." : "No IT tickets matched your selected filter criteria."}
+                actionText={itTickets.length === 0 ? "+ Create IT Ticket" : "Clear Filter"}
+                onAction={itTickets.length === 0 ? () => setIsNewTicketOpen(true) : () => { setSearchQuery(''); setStatusFilter('ALL'); setPriorityFilter('ALL'); setCategoryFilter('ALL'); }}
+              />
             ) : (
               filteredTickets.map((t) => {
                 const priorityBadgeClass = {
@@ -525,74 +528,84 @@ export const ITDepartmentModule: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {itSystems.map((sys) => {
-              const statusConfig = {
-                Operational: { badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', label: 'Operational' },
-                Degraded: { badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', label: 'Degraded Jitter' },
-                Outage: { badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30', label: 'Outage Detected' },
-                Maintenance: { badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30', label: 'Maintenance Window' }
-              }[sys.status];
+          {itSystems.length === 0 ? (
+            <EmptyState
+              icon={Server}
+              title="No Monitored Servers or Cloud Services"
+              description="Register infrastructure endpoints, load balancers, database clusters, and cloud microservices for real-time uptime health monitoring."
+              actionText="Poll System Status"
+              onAction={handleDiagnosticPing}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {itSystems.map((sys) => {
+                const statusConfig = {
+                  Operational: { badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', label: 'Operational' },
+                  Degraded: { badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', label: 'Degraded Jitter' },
+                  Outage: { badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30', label: 'Outage Detected' },
+                  Maintenance: { badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30', label: 'Maintenance Window' }
+                }[sys.status];
 
-              return (
-                <div
-                  key={sys.id}
-                  className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-blue-400">
-                        {sys.category === 'Database' && <HardDrive className="w-4 h-4 text-amber-400" />}
-                        {sys.category === 'Network' && <Wifi className="w-4 h-4 text-cyan-400" />}
-                        {sys.category === 'Security' && <Shield className="w-4 h-4 text-rose-400" />}
-                        {sys.category === 'Cloud' && <Server className="w-4 h-4 text-blue-400" />}
-                        {['Voice/VoIP', 'Storage', 'ERP Backend'].includes(sys.category) && <Cpu className="w-4 h-4 text-purple-400" />}
+                return (
+                  <div
+                    key={sys.id}
+                    className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-neutral-800 border border-neutral-700 flex items-center justify-center text-blue-400">
+                          {sys.category === 'Database' && <HardDrive className="w-4 h-4 text-amber-400" />}
+                          {sys.category === 'Network' && <Wifi className="w-4 h-4 text-cyan-400" />}
+                          {sys.category === 'Security' && <Shield className="w-4 h-4 text-rose-400" />}
+                          {sys.category === 'Cloud' && <Server className="w-4 h-4 text-blue-400" />}
+                          {['Voice/VoIP', 'Storage', 'ERP Backend'].includes(sys.category) && <Cpu className="w-4 h-4 text-purple-400" />}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white">{sys.name}</h4>
+                          <span className="text-[10px] text-neutral-400">{sys.category} • {sys.hostOrIp}</span>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusConfig.badge}`}>
+                        {statusConfig.label}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-2.5 rounded-lg border border-neutral-800/80 text-center">
+                      <div>
+                        <span className="text-[9px] text-neutral-500 uppercase block">Uptime</span>
+                        <span className="text-xs font-mono font-bold text-white">{sys.uptimePercent}%</span>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-white">{sys.name}</h4>
-                        <span className="text-[10px] text-neutral-400">{sys.category} • {sys.hostOrIp}</span>
+                        <span className="text-[9px] text-neutral-500 uppercase block">Latency</span>
+                        <span className="text-xs font-mono font-bold text-emerald-400">{sys.latencyMs}ms</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] text-neutral-500 uppercase block">Load</span>
+                        <span className="text-xs font-mono font-bold text-neutral-300">{sys.cpuLoadPercent}%</span>
                       </div>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusConfig.badge}`}>
-                      {statusConfig.label}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 bg-neutral-950 p-2.5 rounded-lg border border-neutral-800/80 text-center">
-                    <div>
-                      <span className="text-[9px] text-neutral-500 uppercase block">Uptime</span>
-                      <span className="text-xs font-mono font-bold text-white">{sys.uptimePercent}%</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-neutral-500 uppercase block">Latency</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{sys.latencyMs}ms</span>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-neutral-500 uppercase block">Load</span>
-                      <span className="text-xs font-mono font-bold text-neutral-300">{sys.cpuLoadPercent}%</span>
+                    <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/60">
+                      <span>Last checked: {sys.lastPing}</span>
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={() => {
+                            const nextStatus: ITSystemHealth['status'] =
+                              sys.status === 'Operational' ? 'Degraded' : 'Operational';
+                            updateSystemStatus(sys.id, nextStatus);
+                          }}
+                          className="text-neutral-400 hover:text-white underline cursor-pointer"
+                        >
+                          Toggle Health
+                        </button>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/60">
-                    <span>Last checked: {sys.lastPing}</span>
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => {
-                          const nextStatus: ITSystemHealth['status'] =
-                            sys.status === 'Operational' ? 'Degraded' : 'Operational';
-                          updateSystemStatus(sys.id, nextStatus);
-                        }}
-                        className="text-neutral-400 hover:text-white underline cursor-pointer"
-                      >
-                        Toggle Health
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -617,64 +630,74 @@ export const ITDepartmentModule: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {itDevices.map((dev) => {
-              const healthBadge = {
-                Healthy: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-                'Needs Maintenance': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                'Battery Degraded': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
-                'Pending Replacement': 'bg-neutral-800 text-neutral-400 border-neutral-700'
-              }[dev.healthStatus];
+          {itDevices.length === 0 ? (
+            <EmptyState
+              icon={Laptop}
+              title="No Hardware Assets Enrolled"
+              description="Enroll staff workstations, developer laptops, monitors, BitLocker encryption keys, and MDM compliance profiles."
+              actionText="+ Enroll Hardware Device"
+              onAction={() => setIsNewDeviceOpen(true)}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {itDevices.map((dev) => {
+                const healthBadge = {
+                  Healthy: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                  'Needs Maintenance': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                  'Battery Degraded': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
+                  'Pending Replacement': 'bg-neutral-800 text-neutral-400 border-neutral-700'
+                }[dev.healthStatus];
 
-              return (
-                <div
-                  key={dev.id}
-                  className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-                        <Laptop className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono text-xs font-bold text-white">{dev.assetTag}</span>
-                          {dev.encryptionEnabled && (
-                            <Lock className="w-3 h-3 text-emerald-400" title="Disk Encryption Enabled" />
-                          )}
+                return (
+                  <div
+                    key={dev.id}
+                    className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
+                          <Laptop className="w-4 h-4" />
                         </div>
-                        <span className="text-[10px] text-neutral-400">{dev.brand} {dev.model}</span>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-white">{dev.assetTag}</span>
+                            {dev.encryptionEnabled && (
+                              <Lock className="w-3 h-3 text-emerald-400" title="Disk Encryption Enabled" />
+                            )}
+                          </div>
+                          <span className="text-[10px] text-neutral-400">{dev.brand} {dev.model}</span>
+                        </div>
+                      </div>
+
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${healthBadge}`}>
+                        {dev.healthStatus}
+                      </span>
+                    </div>
+
+                    <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800/80 text-xs space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-neutral-500">Assigned User:</span>
+                        <span className="font-semibold text-neutral-200">{dev.assignedTo || 'Unassigned / Spare'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-neutral-500">OS Version:</span>
+                        <span className="font-mono text-neutral-300">{dev.osVersion}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-neutral-500">Serial No:</span>
+                        <span className="font-mono text-neutral-400 text-[11px]">{dev.serialNumber}</span>
                       </div>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border ${healthBadge}`}>
-                      {dev.healthStatus}
-                    </span>
-                  </div>
-
-                  <div className="p-2.5 bg-neutral-950 rounded-lg border border-neutral-800/80 text-xs space-y-1">
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Assigned User:</span>
-                      <span className="font-semibold text-neutral-200">{dev.assignedTo || 'Unassigned / Spare'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">OS Version:</span>
-                      <span className="font-mono text-neutral-300">{dev.osVersion}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-neutral-500">Serial No:</span>
-                      <span className="font-mono text-neutral-400 text-[11px]">{dev.serialNumber}</span>
+                    <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/60">
+                      <span>MDM check-in: {dev.lastMdmCheckIn || 'Active'}</span>
+                      <span className="font-mono text-neutral-400">${dev.purchaseCost}</span>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1 border-t border-neutral-800/60">
-                    <span>MDM check-in: {dev.lastMdmCheckIn || 'Active'}</span>
-                    <span className="font-mono text-neutral-400">${dev.purchaseCost}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
         </div>
       )}
@@ -700,64 +723,74 @@ export const ITDepartmentModule: React.FC = () => {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
-            {itLicenses.map((lic) => {
-              const seatPercent = Math.round((lic.seatsAllocated / lic.seatsTotal) * 100);
-              const isNearCap = seatPercent >= 90;
+          {itLicenses.length === 0 ? (
+            <EmptyState
+              icon={Key}
+              title="No Software Licenses Recorded"
+              description="Keep track of cloud SaaS contracts, seat seatings, developer seats, API allocations, and masked license keys."
+              actionText="+ Add SaaS Subscription"
+              onAction={() => setIsNewLicenseOpen(true)}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {itLicenses.map((lic) => {
+                const seatPercent = Math.round((lic.seatsAllocated / lic.seatsTotal) * 100);
+                const isNearCap = seatPercent >= 90;
 
-              return (
-                <div
-                  key={lic.id}
-                  className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                        <Key className="w-4 h-4" />
+                return (
+                  <div
+                    key={lic.id}
+                    className="p-4 bg-neutral-900/80 border border-neutral-800 rounded-xl space-y-3 shadow-xs"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                          <Key className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white">{lic.softwareName}</h4>
+                          <span className="text-[10px] text-neutral-400">{lic.vendor} • {lic.category}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{lic.softwareName}</h4>
-                        <span className="text-[10px] text-neutral-400">{lic.vendor} • {lic.category}</span>
-                      </div>
-                    </div>
 
-                    <span className="text-xs font-mono font-bold text-emerald-400">
-                      ${(lic.seatsAllocated * lic.costPerSeatAnnual).toLocaleString()}/yr
-                    </span>
-                  </div>
-
-                  {/* Seat Allocation Bar */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-[11px]">
-                      <span className="text-neutral-400">Seats In Use:</span>
-                      <span className="font-mono font-bold text-neutral-200">
-                        {lic.seatsAllocated} / {lic.seatsTotal} ({seatPercent}%)
+                      <span className="text-xs font-mono font-bold text-emerald-400">
+                        ${(lic.seatsAllocated * lic.costPerSeatAnnual).toLocaleString()}/yr
                       </span>
                     </div>
-                    <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden border border-neutral-800">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          isNearCap ? 'bg-rose-500' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: `${Math.min(100, seatPercent)}%` }}
-                      />
-                    </div>
-                  </div>
 
-                  <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800/80 text-[11px] space-y-1 text-neutral-400">
-                    <div className="flex justify-between">
-                      <span>License Key:</span>
-                      <span className="font-mono text-neutral-300">{lic.licenseKeyMasked}</span>
+                    {/* Seat Allocation Bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-neutral-400">Seats In Use:</span>
+                        <span className="font-mono font-bold text-neutral-200">
+                          {lic.seatsAllocated} / {lic.seatsTotal} ({seatPercent}%)
+                        </span>
+                      </div>
+                      <div className="w-full bg-neutral-950 h-2 rounded-full overflow-hidden border border-neutral-800">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            isNearCap ? 'bg-rose-500' : 'bg-emerald-500'
+                          }`}
+                          style={{ width: `${Math.min(100, seatPercent)}%` }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Next Renewal:</span>
-                      <span className="font-mono text-amber-300">{lic.renewalDate}</span>
+
+                    <div className="p-2 bg-neutral-950 rounded-lg border border-neutral-800/80 text-[11px] space-y-1 text-neutral-400">
+                      <div className="flex justify-between">
+                        <span>License Key:</span>
+                        <span className="font-mono text-neutral-300">{lic.licenseKeyMasked}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Next Renewal:</span>
+                        <span className="font-mono text-amber-300">{lic.renewalDate}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
 
         </div>
       )}

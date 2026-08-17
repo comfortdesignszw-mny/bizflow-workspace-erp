@@ -34,6 +34,7 @@ import {
   Square
 } from 'lucide-react';
 import { Project, ProjectStage, ProjectPriority, Task, TaskPriority } from '../../types/erp';
+import { EmptyState } from '../common/EmptyState';
 
 const STAGE_CONFIG: Record<ProjectStage, { label: string; color: string; bg: string; border: string; icon: any }> = {
   'Planning': {
@@ -441,151 +442,161 @@ export const ProjectsModule: React.FC = () => {
           </div>
 
           {/* Projects Card Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filteredProjects.map((proj) => {
-              const stageInfo = STAGE_CONFIG[proj.status] || STAGE_CONFIG['Planning'];
-              const StageIcon = stageInfo.icon;
-              const fundingPct = Math.round(((proj.budgetReceived || 0) / (proj.budget || 1)) * 100);
-              const burnPct = Math.round(((proj.spent || 0) / (proj.budget || 1)) * 100);
+          {filteredProjects.length === 0 ? (
+            <EmptyState
+              icon={Briefcase}
+              title={projects.length === 0 ? "No Projects in Portfolio" : "No Projects Found"}
+              description={projects.length === 0 ? "Launch cross-functional initiatives, assign leads, track budget allocations vs actuals, and manage delivery milestones." : "No project records match your filter criteria."}
+              actionText={projects.length === 0 ? "+ Create Project" : "Clear Filters"}
+              onAction={projects.length === 0 ? handleOpenNewProjectModal : () => { setSearchQuery(''); setStageFilter('ALL'); setDeptFilter('ALL'); }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredProjects.map((proj) => {
+                const stageInfo = STAGE_CONFIG[proj.status] || STAGE_CONFIG['Planning'];
+                const StageIcon = stageInfo.icon;
+                const fundingPct = Math.round(((proj.budgetReceived || 0) / (proj.budget || 1)) * 100);
+                const burnPct = Math.round(((proj.spent || 0) / (proj.budget || 1)) * 100);
 
-              return (
-                <div
-                  key={proj.id}
-                  className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm group"
-                  id={`project-card-${proj.code}`}
-                >
-                  {/* Top Bar: Code, Dept Badge & Stage Dropdown */}
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-800/40 px-2 py-0.5 rounded">
-                          {proj.code}
-                        </span>
-                        <span className="text-[10px] text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
-                          <Building2 className="w-3 h-3 text-neutral-400" />
-                          <span>{proj.department || 'Engineering'}</span>
-                        </span>
+                return (
+                  <div
+                    key={proj.id}
+                    className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm group"
+                    id={`project-card-${proj.code}`}
+                  >
+                    {/* Top Bar: Code, Dept Badge & Stage Dropdown */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-bold text-blue-400 bg-blue-950/60 border border-blue-800/40 px-2 py-0.5 rounded">
+                            {proj.code}
+                          </span>
+                          <span className="text-[10px] text-neutral-300 bg-neutral-800 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                            <Building2 className="w-3 h-3 text-neutral-400" />
+                            <span>{proj.department || 'Engineering'}</span>
+                          </span>
+                        </div>
+
+                        {/* Interactive Stage Badge & Stepper */}
+                        <div className="relative">
+                          <select
+                            value={proj.status}
+                            onChange={(e) => updateProjectStage(proj.id, e.target.value as ProjectStage)}
+                            className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border appearance-none pr-6 cursor-pointer focus:outline-none ${stageInfo.bg} ${stageInfo.color} ${stageInfo.border}`}
+                            title="Change Project Stage"
+                          >
+                            <option value="Planning" className="bg-neutral-900 text-amber-400">Planning</option>
+                            <option value="In Progress" className="bg-neutral-900 text-blue-400">In Progress</option>
+                            <option value="Paused" className="bg-neutral-900 text-rose-400">Paused</option>
+                            <option value="Finished" className="bg-neutral-900 text-emerald-400">Finished</option>
+                          </select>
+                          <ChevronRight className="w-3.5 h-3.5 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90 text-neutral-400" />
+                        </div>
                       </div>
 
-                      {/* Interactive Stage Badge & Stepper */}
-                      <div className="relative">
-                        <select
-                          value={proj.status}
-                          onChange={(e) => updateProjectStage(proj.id, e.target.value as ProjectStage)}
-                          className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border appearance-none pr-6 cursor-pointer focus:outline-none ${stageInfo.bg} ${stageInfo.color} ${stageInfo.border}`}
-                          title="Change Project Stage"
+                      {/* Project Title & Description */}
+                      <div>
+                        <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors leading-snug">
+                          {proj.title}
+                        </h3>
+                        {proj.description && (
+                          <p className="text-xs text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
+                            {proj.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dates & Timeline */}
+                    <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/60 text-[11px] text-neutral-300 space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 flex items-center gap-1">
+                          <Calendar className="w-3 h-3 text-blue-400" />
+                          <span>Start Date:</span>
+                        </span>
+                        <span className="font-mono text-white font-medium">{proj.startDate || '2026-08-01'}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" />
+                          <span>End Date:</span>
+                        </span>
+                        <span className="font-mono text-white font-medium">{proj.endDate || proj.dueDate || '2026-11-30'}</span>
+                      </div>
+                      <div className="flex items-center justify-between pt-1 border-t border-neutral-800/60">
+                        <span className="text-neutral-500">Project Lead:</span>
+                        <span className="font-semibold text-neutral-200">{proj.leadName}</span>
+                      </div>
+                    </div>
+
+                    {/* Financial Tracker: Allocation vs Received */}
+                    <div className="space-y-2 text-xs">
+                      <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+                        <div className="p-2 rounded-lg bg-neutral-950 border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px] uppercase">Allocated:</span>
+                          <span className="text-white font-bold">${(proj.budget || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="p-2 rounded-lg bg-neutral-950 border border-neutral-800">
+                          <span className="text-neutral-500 block text-[10px] uppercase">Received:</span>
+                          <span className="text-emerald-400 font-bold">${(proj.budgetReceived || 0).toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
+                          <span>Progress: {proj.progressPercent}%</span>
+                          <span>Burn: ${(proj.spent || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              proj.status === 'Finished' ? 'bg-emerald-500' :
+                              proj.status === 'Paused' ? 'bg-rose-500' :
+                              'bg-gradient-to-r from-blue-500 to-indigo-500'
+                            }`}
+                            style={{ width: `${proj.progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions & Detail CTA */}
+                    <div className="flex items-center justify-between pt-3 border-t border-neutral-800/80 text-xs">
+                      <button
+                        onClick={() => setDetailProject(proj)}
+                        className="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Project Details</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenEditProjectModal(proj)}
+                          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                          title="Edit Project"
                         >
-                          <option value="Planning" className="bg-neutral-900 text-amber-400">Planning</option>
-                          <option value="In Progress" className="bg-neutral-900 text-blue-400">In Progress</option>
-                          <option value="Paused" className="bg-neutral-900 text-rose-400">Paused</option>
-                          <option value="Finished" className="bg-neutral-900 text-emerald-400">Finished</option>
-                        </select>
-                        <ChevronRight className="w-3.5 h-3.5 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none rotate-90 text-neutral-400" />
-                      </div>
-                    </div>
-
-                    {/* Project Title & Description */}
-                    <div>
-                      <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors leading-snug">
-                        {proj.title}
-                      </h3>
-                      {proj.description && (
-                        <p className="text-xs text-neutral-400 line-clamp-2 mt-1 leading-relaxed">
-                          {proj.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Dates & Timeline */}
-                  <div className="p-2.5 rounded-xl bg-neutral-950 border border-neutral-800/60 text-[11px] text-neutral-300 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-neutral-500 flex items-center gap-1">
-                        <Calendar className="w-3 h-3 text-blue-400" />
-                        <span>Start Date:</span>
-                      </span>
-                      <span className="font-mono text-white font-medium">{proj.startDate || '2026-08-01'}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-neutral-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-400" />
-                        <span>End Date:</span>
-                      </span>
-                      <span className="font-mono text-white font-medium">{proj.endDate || proj.dueDate || '2026-11-30'}</span>
-                    </div>
-                    <div className="flex items-center justify-between pt-1 border-t border-neutral-800/60">
-                      <span className="text-neutral-500">Project Lead:</span>
-                      <span className="font-semibold text-neutral-200">{proj.leadName}</span>
-                    </div>
-                  </div>
-
-                  {/* Financial Tracker: Allocation vs Received */}
-                  <div className="space-y-2 text-xs">
-                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                      <div className="p-2 rounded-lg bg-neutral-950 border border-neutral-800">
-                        <span className="text-neutral-500 block text-[10px] uppercase">Allocated:</span>
-                        <span className="text-white font-bold">${(proj.budget || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-neutral-950 border border-neutral-800">
-                        <span className="text-neutral-500 block text-[10px] uppercase">Received:</span>
-                        <span className="text-emerald-400 font-bold">${(proj.budgetReceived || 0).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
-                        <span>Progress: {proj.progressPercent}%</span>
-                        <span>Burn: ${(proj.spent || 0).toLocaleString()}</span>
-                      </div>
-                      <div className="h-2 w-full bg-neutral-950 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            proj.status === 'Finished' ? 'bg-emerald-500' :
-                            proj.status === 'Paused' ? 'bg-rose-500' :
-                            'bg-gradient-to-r from-blue-500 to-indigo-500'
-                          }`}
-                          style={{ width: `${proj.progressPercent}%` }}
-                        />
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Are you sure you want to delete project ${proj.title}?`)) {
+                              deleteProject(proj.id);
+                            }
+                          }}
+                          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-rose-900/40 text-neutral-400 hover:text-rose-300 transition-colors cursor-pointer"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  {/* Actions & Detail CTA */}
-                  <div className="flex items-center justify-between pt-3 border-t border-neutral-800/80 text-xs">
-                    <button
-                      onClick={() => setDetailProject(proj)}
-                      className="text-blue-400 hover:text-blue-300 font-semibold flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Project Details</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleOpenEditProjectModal(proj)}
-                        className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                        title="Edit Project"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to delete project ${proj.title}?`)) {
-                            deleteProject(proj.id);
-                          }
-                        }}
-                        className="p-1.5 rounded-lg bg-neutral-800 hover:bg-rose-900/40 text-neutral-400 hover:text-rose-300 transition-colors cursor-pointer"
-                        title="Delete Project"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       ) : (
         /* Task Kanban Board */
@@ -607,72 +618,82 @@ export const ProjectsModule: React.FC = () => {
             <span className="text-xs text-neutral-400 font-mono">{filteredTasks.length} tasks in active backlog</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
-            {TASK_COLUMNS.map(col => {
-              const colTasks = filteredTasks.filter(t => t.status === col.status);
+          {filteredTasks.length === 0 ? (
+            <EmptyState
+              icon={KanbanSquare}
+              title="No Sprint Deliverable Tasks"
+              description="Assign tasks across sprint stages (Backlog, To Do, In Progress, Code Review, Done), link them to active projects, and assign engineers."
+              actionText="+ Create Task"
+              onAction={() => setIsAddTaskModalOpen(true)}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
+              {TASK_COLUMNS.map(col => {
+                const colTasks = filteredTasks.filter(t => t.status === col.status);
 
-              return (
-                <div key={col.status} className="bg-neutral-950/80 rounded-2xl border border-neutral-800/80 p-3 space-y-3 min-w-[220px]">
-                  <div className="flex justify-between items-center px-1 pb-2 border-b border-neutral-800">
-                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${col.color}`}>
-                      {col.label}
-                    </span>
-                    <span className="text-xs font-mono text-neutral-500 font-semibold">{colTasks.length}</span>
-                  </div>
+                return (
+                  <div key={col.status} className="bg-neutral-950/80 rounded-2xl border border-neutral-800/80 p-3 space-y-3 min-w-[220px]">
+                    <div className="flex justify-between items-center px-1 pb-2 border-b border-neutral-800">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${col.color}`}>
+                        {col.label}
+                      </span>
+                      <span className="text-xs font-mono text-neutral-500 font-semibold">{colTasks.length}</span>
+                    </div>
 
-                  <div className="space-y-2.5 min-h-[300px]">
-                    {colTasks.map(task => {
-                      const parentProject = projects.find(p => p.id === task.projectId);
+                    <div className="space-y-2.5 min-h-[300px]">
+                      {colTasks.map(task => {
+                        const parentProject = projects.find(p => p.id === task.projectId);
 
-                      return (
-                        <div
-                          key={task.id}
-                          className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all space-y-2 text-xs shadow-sm"
-                        >
-                          {parentProject && (
-                            <span className="text-[10px] font-mono text-blue-400 bg-blue-950/50 px-1.5 py-0.5 rounded">
-                              {parentProject.code}
-                            </span>
-                          )}
-
-                          <div className="flex justify-between items-start gap-2">
-                            <h4 className="font-bold text-white leading-tight">{task.title}</h4>
-                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
-                              task.priority === 'CRITICAL' ? 'bg-red-500/20 text-red-400' :
-                              task.priority === 'HIGH' ? 'bg-amber-500/20 text-amber-400' :
-                              'bg-neutral-800 text-neutral-400'
-                            }`}>
-                              {task.priority}
-                            </span>
-                          </div>
-
-                          <p className="text-[11px] text-neutral-400 line-clamp-2">{task.description}</p>
-
-                          <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-[10px] text-neutral-500">
-                            <span className="text-neutral-300 font-medium">{(task.assigneeName || 'Unassigned').split(' ')[0]}</span>
-                            <span className="font-mono">{task.estimatedHours}h est</span>
-                          </div>
-
-                          {/* Quick status transition dropdown */}
-                          <select
-                            value={task.status}
-                            onChange={(e) => updateTaskStatus(task.id, e.target.value as any)}
-                            className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-300"
+                        return (
+                          <div
+                            key={task.id}
+                            className="p-3 rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all space-y-2 text-xs shadow-sm"
                           >
-                            <option value="Backlog">Backlog</option>
-                            <option value="Todo">To Do</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="Review">Code Review</option>
-                            <option value="Done">Done</option>
-                          </select>
-                        </div>
-                      );
-                    })}
+                            {parentProject && (
+                              <span className="text-[10px] font-mono text-blue-400 bg-blue-950/50 px-1.5 py-0.5 rounded">
+                                {parentProject.code}
+                              </span>
+                            )}
+
+                            <div className="flex justify-between items-start gap-2">
+                              <h4 className="font-bold text-white leading-tight">{task.title}</h4>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                                task.priority === 'CRITICAL' ? 'bg-red-500/20 text-red-400' :
+                                task.priority === 'HIGH' ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-neutral-800 text-neutral-400'
+                              }`}>
+                                {task.priority}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-neutral-400 line-clamp-2">{task.description}</p>
+
+                            <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-[10px] text-neutral-500">
+                              <span className="text-neutral-300 font-medium">{(task.assigneeName || 'Unassigned').split(' ')[0]}</span>
+                              <span className="font-mono">{task.estimatedHours}h est</span>
+                            </div>
+
+                            {/* Quick status transition dropdown */}
+                            <select
+                              value={task.status}
+                              onChange={(e) => updateTaskStatus(task.id, e.target.value as any)}
+                              className="w-full bg-neutral-950 border border-neutral-800 rounded px-2 py-1 text-[10px] text-neutral-300"
+                            >
+                              <option value="Backlog">Backlog</option>
+                              <option value="Todo">To Do</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Review">Code Review</option>
+                              <option value="Done">Done</option>
+                            </select>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

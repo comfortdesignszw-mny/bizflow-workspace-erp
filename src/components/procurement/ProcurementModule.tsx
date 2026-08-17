@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { PurchaseOrder, PurchaseOrderStatus, Vendor } from '../../types/erp';
 import { FleetManagement } from './FleetManagement';
+import { EmptyState } from '../common/EmptyState';
 
 export const ProcurementModule: React.FC = () => {
   const {
@@ -281,127 +282,147 @@ export const ProcurementModule: React.FC = () => {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[11px] border-b border-neutral-800">
-                  <tr>
-                    <th className="p-4">PO Number</th>
-                    <th className="p-4">Vendor & Department</th>
-                    <th className="p-4">Order Date</th>
-                    <th className="p-4">Delivery Window</th>
-                    <th className="p-4">Amount</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-800/60">
-                  {filteredPOs.map((po) => (
-                    <tr key={po.id} className="hover:bg-neutral-900/80 transition-colors">
-                      <td className="p-4 font-mono font-bold text-purple-400">
-                        {po.poNumber}
-                      </td>
-                      <td className="p-4">
-                        <div className="font-semibold text-white">{po.vendorName}</div>
-                        <div className="text-[11px] text-neutral-400">Dept: {po.department} • Req: {po.requestedBy}</div>
-                      </td>
-                      <td className="p-4 font-mono text-neutral-300">
-                        {po.orderDate}
-                      </td>
-                      <td className="p-4">
-                        <div className="font-mono text-xs text-neutral-300">Exp: {po.expectedDelivery}</div>
-                        {po.trackingNumber && (
-                          <div className="text-[10px] text-purple-400 font-mono flex items-center gap-1">
-                            <Truck className="w-3 h-3" /> {po.carrier}: {po.trackingNumber}
-                          </div>
-                        )}
-                      </td>
-                      <td className="p-4 font-mono font-bold text-white">
-                        ${po.totalAmount.toLocaleString()} {po.currency}
-                      </td>
-                      <td className="p-4">
-                        {getStatusBadge(po.status)}
-                      </td>
-                      <td className="p-4 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {po.status === 'Requested' && (
-                            <button
-                              onClick={() => updatePurchaseOrderStatus(po.id, 'Ordered')}
-                              className="px-2.5 py-1 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-[11px] font-medium border border-blue-500/30"
-                            >
-                              Dispatch Order
-                            </button>
-                          )}
-                          {po.status === 'Ordered' && (
-                            <button
-                              onClick={() => updatePurchaseOrderStatus(po.id, 'Delivered')}
-                              className="px-2.5 py-1 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-lg text-[11px] font-medium border border-emerald-500/30"
-                            >
-                              Confirm Receipt
-                            </button>
-                          )}
-                          <button
-                            onClick={() => setSelectedPO(po)}
-                            className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
-                            title="View Items"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
+          {filteredPOs.length === 0 ? (
+            <EmptyState
+              icon={Package}
+              title={purchaseOrders.length === 0 ? "No Purchase Orders" : "No Purchase Orders Found"}
+              description={purchaseOrders.length === 0 ? "Raise purchase requisitions, dispatch vendor orders, manage delivery windows, and verify incoming inventory shipments." : "No orders match your filter criteria."}
+              actionText={purchaseOrders.length === 0 ? "+ Create Requisition" : "Clear Filters"}
+              onAction={purchaseOrders.length === 0 ? () => setIsAddPOModalOpen(true) : () => { setSearchTerm(''); setStatusFilter('ALL'); }}
+            />
+          ) : (
+            <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[11px] border-b border-neutral-800">
+                    <tr>
+                      <th className="p-4">PO Number</th>
+                      <th className="p-4">Vendor & Department</th>
+                      <th className="p-4">Order Date</th>
+                      <th className="p-4">Delivery Window</th>
+                      <th className="p-4">Amount</th>
+                      <th className="p-4">Status</th>
+                      <th className="p-4 text-right">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60">
+                    {filteredPOs.map((po) => (
+                      <tr key={po.id} className="hover:bg-neutral-900/80 transition-colors">
+                        <td className="p-4 font-mono font-bold text-purple-400">
+                          {po.poNumber}
+                        </td>
+                        <td className="p-4">
+                          <div className="font-semibold text-white">{po.vendorName}</div>
+                          <div className="text-[11px] text-neutral-400">Dept: {po.department} • Req: {po.requestedBy}</div>
+                        </td>
+                        <td className="p-4 font-mono text-neutral-300">
+                          {po.orderDate}
+                        </td>
+                        <td className="p-4">
+                          <div className="font-mono text-xs text-neutral-300">Exp: {po.expectedDelivery}</div>
+                          {po.trackingNumber && (
+                            <div className="text-[10px] text-purple-400 font-mono flex items-center gap-1">
+                              <Truck className="w-3 h-3" /> {po.carrier}: {po.trackingNumber}
+                            </div>
+                          )}
+                        </td>
+                        <td className="p-4 font-mono font-bold text-white">
+                          ${po.totalAmount.toLocaleString()} {po.currency}
+                        </td>
+                        <td className="p-4">
+                          {getStatusBadge(po.status)}
+                        </td>
+                        <td className="p-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {po.status === 'Requested' && (
+                              <button
+                                onClick={() => updatePurchaseOrderStatus(po.id, 'Ordered')}
+                                className="px-2.5 py-1 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-[11px] font-medium border border-blue-500/30"
+                              >
+                                Dispatch Order
+                              </button>
+                            )}
+                            {po.status === 'Ordered' && (
+                              <button
+                                onClick={() => updatePurchaseOrderStatus(po.id, 'Delivered')}
+                                className="px-2.5 py-1 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-lg text-[11px] font-medium border border-emerald-500/30"
+                              >
+                                Confirm Receipt
+                              </button>
+                            )}
+                            <button
+                              onClick={() => setSelectedPO(po)}
+                              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
+                              title="View Items"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 
       {/* TAB 2: VENDOR DIRECTORY */}
       {activeTab === 'vendors' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {vendors.map((vendor) => (
-            <div key={vendor.id} className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-purple-300 border border-neutral-700">
-                    {vendor.category}
-                  </span>
-                  <h3 className="text-base font-bold text-white mt-1.5">{vendor.name}</h3>
-                  <p className="text-xs text-neutral-400">Payment Terms: {vendor.paymentTerms}</p>
-                </div>
-                <div className="text-right">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {vendor.status}
-                  </span>
-                  <div className="text-xs font-mono text-neutral-400 mt-1">
-                    Rating: <strong className="text-amber-400">★ {vendor.rating}</strong>
+        vendors.length === 0 ? (
+          <EmptyState
+            icon={Building}
+            title="No Registered Vendors"
+            description="Onboard qualified suppliers, establish commercial payment terms, record vendor quality ratings, and track YTD procurement expenditures."
+            actionText="+ Create Purchase Order"
+            onAction={() => setIsAddPOModalOpen(true)}
+          />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {vendors.map((vendor) => (
+              <div key={vendor.id} className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-purple-300 border border-neutral-700">
+                      {vendor.category}
+                    </span>
+                    <h3 className="text-base font-bold text-white mt-1.5">{vendor.name}</h3>
+                    <p className="text-xs text-neutral-400">Payment Terms: {vendor.paymentTerms}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {vendor.status}
+                    </span>
+                    <div className="text-xs font-mono text-neutral-400 mt-1">
+                      Rating: <strong className="text-amber-400">★ {vendor.rating}</strong>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-neutral-800/80">
-                <div className="space-y-1">
-                  <div className="text-neutral-400 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-neutral-500" />
-                    <span>{vendor.email}</span>
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-neutral-800/80">
+                  <div className="space-y-1">
+                    <div className="text-neutral-400 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>{vendor.email}</span>
+                    </div>
+                    <div className="text-neutral-400 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>{vendor.phone}</span>
+                    </div>
                   </div>
-                  <div className="text-neutral-400 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-neutral-500" />
-                    <span>{vendor.phone}</span>
+                  <div className="text-right">
+                    <span className="text-neutral-500 block text-[11px]">Total YTD Spend</span>
+                    <span className="font-mono font-bold text-white text-sm">
+                      ${vendor.totalSpend.toLocaleString()}
+                    </span>
                   </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-neutral-500 block text-[11px]">Total YTD Spend</span>
-                  <span className="font-mono font-bold text-white text-sm">
-                    ${vendor.totalSpend.toLocaleString()}
-                  </span>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* TAB 3: LOGISTICS & SHIPMENTS */}
@@ -412,24 +433,34 @@ export const ProcurementModule: React.FC = () => {
               <Truck className="w-4 h-4 text-purple-400" />
               Active Inbound Freight Shipments
             </h3>
-            <div className="space-y-3">
-              {purchaseOrders.filter(po => po.trackingNumber).map(po => (
-                <div key={po.id} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                  <div>
-                    <span className="text-[10px] font-mono text-purple-400 font-bold">{po.poNumber}</span>
-                    <h4 className="text-sm font-bold text-white">{po.vendorName}</h4>
-                    <p className="text-xs text-neutral-400">Items: {po.items.map(i => i.name).join(', ')}</p>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <div className="text-right">
-                      <span className="text-neutral-400 block text-[10px]">Carrier & Tracking</span>
-                      <span className="text-white font-bold">{po.carrier} ({po.trackingNumber})</span>
+            {purchaseOrders.filter(po => po.trackingNumber).length === 0 ? (
+              <EmptyState
+                icon={Truck}
+                title="No Active Inbound Freight Shipments"
+                description="Orders with carrier tracking numbers (DHL, FedEx, UPS) will automatically appear here with real-time waypoint progression."
+                actionText="+ Create Order with Tracking"
+                onAction={() => setIsAddPOModalOpen(true)}
+              />
+            ) : (
+              <div className="space-y-3">
+                {purchaseOrders.filter(po => po.trackingNumber).map(po => (
+                  <div key={po.id} className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                    <div>
+                      <span className="text-[10px] font-mono text-purple-400 font-bold">{po.poNumber}</span>
+                      <h4 className="text-sm font-bold text-white">{po.vendorName}</h4>
+                      <p className="text-xs text-neutral-400">Items: {po.items.map(i => i.name).join(', ')}</p>
                     </div>
-                    {getStatusBadge(po.status)}
+                    <div className="flex items-center gap-4 text-xs font-mono">
+                      <div className="text-right">
+                        <span className="text-neutral-400 block text-[10px]">Carrier & Tracking</span>
+                        <span className="text-white font-bold">{po.carrier} ({po.trackingNumber})</span>
+                      </div>
+                      {getStatusBadge(po.status)}
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

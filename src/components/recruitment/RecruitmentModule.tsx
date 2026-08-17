@@ -37,6 +37,7 @@ import {
   IdCard,
   User
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { Applicant, JobOpening, RecruitmentStage, ApplicantFile } from '../../types/erp';
 import { exportApplicantsPDF, exportApplicantsCSV } from '../../utils/pdfExport';
 
@@ -405,180 +406,190 @@ export const RecruitmentModule: React.FC = () => {
         </div>
 
         {/* Job Openings Grid with Expandable Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {jobOpenings.map(job => {
-            const isExpanded = !!expandedJobIds[job.id];
-            const candidateCount = applicants.filter(a => a.jobOpeningId === job.id).length;
+        {jobOpenings.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {jobOpenings.map(job => {
+              const isExpanded = !!expandedJobIds[job.id];
+              const candidateCount = applicants.filter(a => a.jobOpeningId === job.id).length;
 
-            return (
-              <div
-                key={job.id}
-                className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm"
-              >
-                <div>
-                  {/* Top Bar: Department, Type, Status */}
-                  <div className="flex justify-between items-center text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold text-[10px]">
-                        {job.department}
+              return (
+                <div
+                  key={job.id}
+                  className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm"
+                >
+                  <div>
+                    {/* Top Bar: Department, Type, Status */}
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 font-semibold text-[10px]">
+                          {job.department}
+                        </span>
+                        <span className="text-neutral-400 text-[11px] font-mono">{job.employmentType || job.type}</span>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        job.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-neutral-800 text-neutral-400'
+                      }`}>
+                        {job.status}
                       </span>
-                      <span className="text-neutral-400 text-[11px] font-mono">{job.employmentType || job.type}</span>
                     </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      job.status === 'Active' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-neutral-800 text-neutral-400'
-                    }`}>
-                      {job.status}
-                    </span>
-                  </div>
 
-                  {/* Title & Key Specs */}
-                  <h3 className="text-base font-bold text-white mt-2 leading-snug">{job.title}</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-neutral-400 mt-2 font-mono">
-                    <div>
-                      <span className="text-neutral-500 block text-[10px]">Salary:</span>
-                      <span className="text-emerald-400 font-semibold">{job.salaryRange}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-500 block text-[10px]">Location:</span>
-                      <span className="text-neutral-300">{job.location}</span>
-                    </div>
-                    <div>
-                      <span className="text-neutral-500 block text-[10px]">Experience:</span>
-                      <span className="text-neutral-300">{job.experienceLevel}</span>
-                    </div>
-                  </div>
-
-                  {/* Summary Snippet */}
-                  <p className="text-xs text-neutral-300 mt-3 line-clamp-2 leading-relaxed">
-                    {job.description}
-                  </p>
-
-                  {/* Expand / Collapse Button */}
-                  <button
-                    onClick={() => toggleJobExpansion(job.id)}
-                    className="mt-3 text-xs text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
-                  >
-                    {isExpanded ? (
-                      <>
-                        <ChevronUp className="w-3.5 h-3.5" />
-                        <span>Hide Full Job Profile & Requirements</span>
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="w-3.5 h-3.5" />
-                        <span>Expand Full Job Description, Qualifications & Skills</span>
-                      </>
-                    )}
-                  </button>
-
-                  {/* EXPANDED SECTION */}
-                  {isExpanded && (
-                    <div className="mt-4 p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3.5 text-xs animate-in fade-in duration-200">
+                    {/* Title & Key Specs */}
+                    <h3 className="text-base font-bold text-white mt-2 leading-snug">{job.title}</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] text-neutral-400 mt-2 font-mono">
                       <div>
-                        <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Full Job Overview</h4>
-                        <p className="text-neutral-300 mt-1 leading-relaxed">{job.description}</p>
+                        <span className="text-neutral-500 block text-[10px]">Salary:</span>
+                        <span className="text-emerald-400 font-semibold">{job.salaryRange}</span>
                       </div>
-
-                      {/* Requirements */}
-                      {job.requirements && job.requirements.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Core Responsibilities & Requirements</h4>
-                          <ul className="mt-1 space-y-1 text-neutral-300">
-                            {job.requirements.map((r, idx) => (
-                              <li key={idx} className="flex items-start gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5" />
-                                <span>{r}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Qualifications */}
-                      {job.qualifications && job.qualifications.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Expected Qualifications</h4>
-                          <ul className="mt-1 space-y-1 text-neutral-300">
-                            {job.qualifications.map((q, idx) => (
-                              <li key={idx} className="flex items-start gap-1.5">
-                                <Award className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
-                                <span>{q}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Skills Tags */}
-                      {job.skills && job.skills.length > 0 && (
-                        <div>
-                          <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Expected Technical Competencies</h4>
-                          <div className="flex flex-wrap gap-1.5 mt-1.5">
-                            {job.skills.map((s, idx) => (
-                              <span key={idx} className="px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-700 text-purple-300 text-[11px] font-mono">
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-[10px] text-neutral-500 font-mono">
-                        <span>Posted: {job.postedDate}</span>
-                        <span>Deadline: {job.applicationDeadline || 'Rolling Admissions'}</span>
+                      <div>
+                        <span className="text-neutral-500 block text-[10px]">Location:</span>
+                        <span className="text-neutral-300">{job.location}</span>
+                      </div>
+                      <div>
+                        <span className="text-neutral-500 block text-[10px]">Experience:</span>
+                        <span className="text-neutral-300">{job.experienceLevel}</span>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Card Action Buttons: Apply, Share, Edit, Delete */}
-                <div className="pt-3 border-t border-neutral-800 flex flex-wrap justify-between items-center gap-2">
-                  <div className="flex items-center gap-2">
+                    {/* Summary Snippet */}
+                    <p className="text-xs text-neutral-300 mt-3 line-clamp-2 leading-relaxed">
+                      {job.description}
+                    </p>
+
+                    {/* Expand / Collapse Button */}
                     <button
-                      onClick={() => handleOpenApplyModal(job)}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
-                      id={`btn-apply-job-${job.id}`}
+                      onClick={() => toggleJobExpansion(job.id)}
+                      className="mt-3 text-xs text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
                     >
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Apply to Job</span>
+                      {isExpanded ? (
+                        <>
+                          <ChevronUp className="w-3.5 h-3.5" />
+                          <span>Hide Full Job Profile & Requirements</span>
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-3.5 h-3.5" />
+                          <span>Expand Full Job Description, Qualifications & Skills</span>
+                        </>
+                      )}
                     </button>
 
-                    <button
-                      onClick={() => setSharingJob(job)}
-                      className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                      title="Share to Outward Socials"
-                      id={`btn-share-job-${job.id}`}
-                    >
-                      <Share2 className="w-4 h-4" />
-                    </button>
+                    {/* EXPANDED SECTION */}
+                    {isExpanded && (
+                      <div className="mt-4 p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-3.5 text-xs animate-in fade-in duration-200">
+                        <div>
+                          <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Full Job Overview</h4>
+                          <p className="text-neutral-300 mt-1 leading-relaxed">{job.description}</p>
+                        </div>
+
+                        {/* Requirements */}
+                        {job.requirements && job.requirements.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Core Responsibilities & Requirements</h4>
+                            <ul className="mt-1 space-y-1 text-neutral-300">
+                              {job.requirements.map((r, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5" />
+                                  <span>{r}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Qualifications */}
+                        {job.qualifications && job.qualifications.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Expected Qualifications</h4>
+                            <ul className="mt-1 space-y-1 text-neutral-300">
+                              {job.qualifications.map((q, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <Award className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
+                                  <span>{q}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Skills Tags */}
+                        {job.skills && job.skills.length > 0 && (
+                          <div>
+                            <h4 className="font-bold text-neutral-300 uppercase tracking-wider text-[10px]">Expected Technical Competencies</h4>
+                            <div className="flex flex-wrap gap-1.5 mt-1.5">
+                              {job.skills.map((s, idx) => (
+                                <span key={idx} className="px-2 py-0.5 rounded-md bg-neutral-900 border border-neutral-700 text-purple-300 text-[11px] font-mono">
+                                  {s}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between items-center pt-2 border-t border-neutral-800 text-[10px] text-neutral-500 font-mono">
+                          <span>Posted: {job.postedDate}</span>
+                          <span>Deadline: {job.applicationDeadline || 'Rolling Admissions'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] text-neutral-400 font-mono mr-2">{candidateCount} applied</span>
-                    <button
-                      onClick={() => setEditingJob(job)}
-                      className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
-                      title="Edit Job Requisition"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Are you sure you want to delete the job opening "${job.title}"?`)) {
-                          deleteJobOpening(job.id);
-                        }
-                      }}
-                      className="p-2 rounded-xl bg-neutral-800 hover:bg-red-950 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
-                      title="Delete Job"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                  {/* Card Action Buttons: Apply, Share, Edit, Delete */}
+                  <div className="pt-3 border-t border-neutral-800 flex flex-wrap justify-between items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleOpenApplyModal(job)}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                        id={`btn-apply-job-${job.id}`}
+                      >
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Apply to Job</span>
+                      </button>
+
+                      <button
+                        onClick={() => setSharingJob(job)}
+                        className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                        title="Share to Outward Socials"
+                        id={`btn-share-job-${job.id}`}
+                      >
+                        <Share2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] text-neutral-400 font-mono mr-2">{candidateCount} applied</span>
+                      <button
+                        onClick={() => setEditingJob(job)}
+                        className="p-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors cursor-pointer"
+                        title="Edit Job Requisition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Are you sure you want to delete the job opening "${job.title}"?`)) {
+                            deleteJobOpening(job.id);
+                          }
+                        }}
+                        className="p-2 rounded-xl bg-neutral-800 hover:bg-red-950 text-neutral-400 hover:text-red-400 transition-colors cursor-pointer"
+                        title="Delete Job"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Briefcase}
+            title="No Open Job Requisitions"
+            description="Create open job postings with custom compensation ranges, job profiles, requirements, and direct application links."
+            actionText="+ Open Job Requisition"
+            onAction={() => setIsAddJobModalOpen(true)}
+          />
+        )}
       </div>
 
       {/* SECTION 2: APPLICANT TRACKING PIPELINE & CANDIDATE DOSSIER */}
@@ -623,8 +634,17 @@ export const RecruitmentModule: React.FC = () => {
           </div>
         </div>
 
-        {/* VIEW 1: KANBAN BOARD */}
-        {viewMode === 'kanban' && (
+        {filteredApplicants.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title={applicants.length === 0 ? "No Candidates in Pipeline" : "No Candidates Found"}
+            description={applicants.length === 0 ? "Add candidates directly or share job postings to receive applicant dossiers with resumes and certifications." : "No candidates matched your search criteria."}
+            actionText={applicants.length === 0 ? "+ Submit Candidate Application" : "Clear Filter"}
+            onAction={applicants.length === 0 ? () => setIsAddApplicantModalOpen(true) : () => { setSearchQuery(''); setSelectedJobId('ALL'); }}
+            secondaryActionText={applicants.length === 0 ? "+ Open Job Opening" : undefined}
+            onSecondaryAction={applicants.length === 0 ? () => setIsAddJobModalOpen(true) : undefined}
+          />
+        ) : viewMode === 'kanban' ? (
           <div className="grid grid-cols-1 md:grid-cols-5 gap-4 overflow-x-auto pb-4">
             {STAGES.map(stage => {
               const stageApplicants = filteredApplicants.filter(a => a.stage === stage.key);
@@ -702,10 +722,7 @@ export const RecruitmentModule: React.FC = () => {
               );
             })}
           </div>
-        )}
-
-        {/* VIEW 2: DETAILED TABLE ROSTER */}
-        {viewMode === 'table' && (
+        ) : (
           <div className="overflow-x-auto rounded-2xl border border-neutral-800 bg-neutral-900">
             <table className="w-full text-left border-collapse text-xs">
               <thead>

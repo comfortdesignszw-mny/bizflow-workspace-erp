@@ -16,6 +16,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { Task, TaskPriority } from '../../types/erp';
 
 export const TasksModule: React.FC = () => {
@@ -213,73 +214,90 @@ export const TasksModule: React.FC = () => {
       </div>
 
       {/* Kanban Board */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        {columns.map(({ status, label, color }) => {
-          const columnTasks = filteredTasks.filter(t => t.status === status);
+      {filteredTasks.length === 0 ? (
+        <EmptyState
+          icon={CheckSquare}
+          title={tasks.length === 0 ? "No Active Tasks in Sprint" : "No Matching Tasks"}
+          description={tasks.length === 0 ? "Create sprint backlog tasks, set priority SLAs, and assign enterprise tickets across engineering staff." : "No tasks matched your search or project filters."}
+          actionText={tasks.length === 0 ? "+ Create Sprint Task" : "Clear Filter"}
+          onAction={tasks.length === 0 ? () => setIsAddTaskModalOpen(true) : () => { setSearchTerm(''); setPriorityFilter('ALL'); setProjectFilter('ALL'); }}
+        />
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          {columns.map(({ status, label, color }) => {
+            const columnTasks = filteredTasks.filter(t => t.status === status);
 
-          return (
-            <div key={status} className={`p-4 rounded-2xl border ${color} space-y-3 flex flex-col min-h-[520px]`}>
-              <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
-                <h3 className="text-xs font-bold text-white uppercase tracking-wider">{label}</h3>
-                <span className="w-5 h-5 rounded-full bg-neutral-800 text-neutral-300 text-[10px] font-bold flex items-center justify-center">
-                  {columnTasks.length}
-                </span>
+            return (
+              <div key={status} className={`p-4 rounded-2xl border ${color} space-y-3 flex flex-col min-h-[520px]`}>
+                <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
+                  <h3 className="text-xs font-bold text-white uppercase tracking-wider">{label}</h3>
+                  <span className="w-5 h-5 rounded-full bg-neutral-800 text-neutral-300 text-[10px] font-bold flex items-center justify-center">
+                    {columnTasks.length}
+                  </span>
+                </div>
+
+                <div className="space-y-3 flex-1 overflow-y-auto">
+                  {columnTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5 shadow-md hover:border-neutral-700 transition-all"
+                    >
+                      <div>
+                        <span className="text-[10px] font-mono text-blue-400 font-semibold">{task.projectName}</span>
+                        <h4 className="text-xs font-bold text-white mt-0.5">{task.title}</h4>
+                        {task.description && (
+                          <p className="text-[11px] text-neutral-400 line-clamp-2 mt-1">{task.description}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] font-mono pt-1">
+                        <span className={`px-2 py-0.5 rounded font-bold ${
+                          task.priority === 'Critical' ? 'bg-rose-500/20 text-rose-300' :
+                          task.priority === 'High' ? 'bg-amber-500/20 text-amber-300' :
+                          'bg-neutral-800 text-neutral-300'
+                        }`}>
+                          {task.priority}
+                        </span>
+                        <span className="text-neutral-400">{task.dueDate}</span>
+                      </div>
+
+                      <div className="text-[10px] text-neutral-400 border-t border-neutral-800/60 pt-1.5 flex justify-between items-center">
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3 text-neutral-500" />
+                          <span>{(task.assigneeName || 'Unassigned').split(' ')[0]}</span>
+                        </span>
+
+                        {/* Quick move button */}
+                        {status !== 'Done' && (
+                          <button
+                            onClick={() => {
+                              const nextStatus: Task['status'] =
+                                status === 'Backlog' ? 'Todo' :
+                                status === 'Todo' ? 'In Progress' :
+                                status === 'In Progress' ? 'Review' : 'Done';
+                              updateTaskStatus(task.id, nextStatus);
+                            }}
+                            className="text-blue-400 hover:text-blue-300 flex items-center gap-0.5 text-[10px] font-semibold"
+                          >
+                            Next <ArrowRight className="w-2.5 h-2.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {columnTasks.length === 0 && (
+                    <div className="h-28 flex flex-col items-center justify-center text-center p-3 rounded-xl border border-dashed border-neutral-800/80 text-neutral-500 text-xs">
+                      <p className="font-medium text-[11px] text-neutral-400">Empty Stage</p>
+                      <p className="text-[10px] text-neutral-600 mt-0.5">No tasks in this lane</p>
+                    </div>
+                  )}
+                </div>
               </div>
-
-              <div className="space-y-3 flex-1 overflow-y-auto">
-                {columnTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5 shadow-md hover:border-neutral-700 transition-all"
-                  >
-                    <div>
-                      <span className="text-[10px] font-mono text-blue-400 font-semibold">{task.projectName}</span>
-                      <h4 className="text-xs font-bold text-white mt-0.5">{task.title}</h4>
-                      {task.description && (
-                        <p className="text-[11px] text-neutral-400 line-clamp-2 mt-1">{task.description}</p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center justify-between text-[10px] font-mono pt-1">
-                      <span className={`px-2 py-0.5 rounded font-bold ${
-                        task.priority === 'Critical' ? 'bg-rose-500/20 text-rose-300' :
-                        task.priority === 'High' ? 'bg-amber-500/20 text-amber-300' :
-                        'bg-neutral-800 text-neutral-300'
-                      }`}>
-                        {task.priority}
-                      </span>
-                      <span className="text-neutral-400">{task.dueDate}</span>
-                    </div>
-
-                    <div className="text-[10px] text-neutral-400 border-t border-neutral-800/60 pt-1.5 flex justify-between items-center">
-                      <span className="flex items-center gap-1">
-                        <User className="w-3 h-3 text-neutral-500" />
-                        <span>{(task.assigneeName || 'Unassigned').split(' ')[0]}</span>
-                      </span>
-
-                      {/* Quick move button */}
-                      {status !== 'Done' && (
-                        <button
-                          onClick={() => {
-                            const nextStatus: Task['status'] =
-                              status === 'Backlog' ? 'Todo' :
-                              status === 'Todo' ? 'In Progress' :
-                              status === 'In Progress' ? 'Review' : 'Done';
-                            updateTaskStatus(task.id, nextStatus);
-                          }}
-                          className="text-blue-400 hover:text-blue-300 flex items-center gap-0.5 text-[10px] font-semibold"
-                        >
-                          Next <ArrowRight className="w-2.5 h-2.5" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* MODAL: CREATE TASK */}
       {isAddTaskModalOpen && (

@@ -15,6 +15,7 @@ import {
   Edit3,
   Bookmark
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { WorkplaceNote } from '../../types/erp';
 
 export const NotesPadModule: React.FC = () => {
@@ -148,39 +149,51 @@ export const NotesPadModule: React.FC = () => {
 
           {/* Notes List */}
           <div className="space-y-2 flex-1 overflow-y-auto max-h-[500px]">
-            {filteredNotes.map((note) => {
-              const isSelected = selectedNote?.id === note.id;
-              return (
-                <div
-                  key={note.id}
-                  onClick={() => setSelectedNoteId(note.id)}
-                  className={`p-3.5 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
-                    isSelected
-                      ? 'bg-amber-950/20 border-amber-500/50 shadow-md'
-                      : 'bg-neutral-950/70 border-neutral-800/80 hover:border-neutral-700'
-                  }`}
+            {filteredNotes.length === 0 ? (
+              <div className="p-4 text-center text-xs text-neutral-500 space-y-2 border border-dashed border-neutral-800 rounded-xl">
+                <p>No notes found.</p>
+                <button
+                  onClick={handleCreateNewNote}
+                  className="px-3 py-1 bg-amber-600/20 text-amber-400 hover:bg-amber-600/30 rounded-lg text-[11px] font-medium"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-1.5 truncate">
-                      {note.pinned && <Pin className="w-3 h-3 text-amber-400 shrink-0" />}
-                      <span className="text-xs font-bold text-white truncate">{note.title || 'Untitled'}</span>
+                  + Add first note
+                </button>
+              </div>
+            ) : (
+              filteredNotes.map((note) => {
+                const isSelected = selectedNote?.id === note.id;
+                return (
+                  <div
+                    key={note.id}
+                    onClick={() => setSelectedNoteId(note.id)}
+                    className={`p-3.5 rounded-xl border transition-all cursor-pointer space-y-1.5 ${
+                      isSelected
+                        ? 'bg-amber-950/20 border-amber-500/50 shadow-md'
+                        : 'bg-neutral-950/70 border-neutral-800/80 hover:border-neutral-700'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-1.5 truncate">
+                        {note.pinned && <Pin className="w-3 h-3 text-amber-400 shrink-0" />}
+                        <span className="text-xs font-bold text-white truncate">{note.title || 'Untitled'}</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-neutral-800 text-neutral-300 shrink-0">
+                        {note.category}
+                      </span>
                     </div>
-                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono bg-neutral-800 text-neutral-300 shrink-0">
-                      {note.category}
-                    </span>
-                  </div>
 
-                  <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
-                    {note.content.replace(/[#*`_]/g, '')}
-                  </p>
+                    <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
+                      {note.content.replace(/[#*`_]/g, '')}
+                    </p>
 
-                  <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1">
-                    <span>{note.authorName}</span>
-                    <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                    <div className="flex items-center justify-between text-[10px] text-neutral-500 pt-1">
+                      <span>{note.authorName}</span>
+                      <span>{new Date(note.updatedAt).toLocaleDateString()}</span>
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
 
@@ -284,15 +297,14 @@ export const NotesPadModule: React.FC = () => {
 
           </div>
         ) : (
-          <div className="lg:col-span-8 p-12 rounded-2xl bg-neutral-900/80 border border-neutral-800 flex flex-col items-center justify-center text-center space-y-3">
-            <FileText className="w-12 h-12 text-neutral-600" />
-            <h3 className="text-base font-bold text-white">No Note Selected</h3>
-            <button
-              onClick={handleCreateNewNote}
-              className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-semibold"
-            >
-              Create Note
-            </button>
+          <div className="lg:col-span-8 p-12 rounded-2xl bg-neutral-900/80 border border-neutral-800 flex flex-col items-center justify-center text-center">
+            <EmptyState
+              icon={FileText}
+              title="No Note Selected"
+              description="Create a new workplace memo, meeting minutes, architecture document, or daily notes scratchpad."
+              actionText="+ Create Workplace Note"
+              onAction={handleCreateNewNote}
+            />
           </div>
         )}
 

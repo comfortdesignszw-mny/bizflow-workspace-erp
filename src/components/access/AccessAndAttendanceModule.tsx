@@ -18,6 +18,7 @@ import {
   Award,
   Lock
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { ScanType, AttendanceStatus } from '../../types/erp';
 
 export const AccessAndAttendanceModule: React.FC = () => {
@@ -296,83 +297,93 @@ export const AccessAndAttendanceModule: React.FC = () => {
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
-                  <th className="py-3 px-4">Employee</th>
-                  <th className="py-3 px-3">First In</th>
-                  <th className="py-3 px-3">Last Out</th>
-                  <th className="py-3 px-3">Logged Hours</th>
-                  <th className="py-3 px-3">Lateness</th>
-                  <th className="py-3 px-3">Overtime</th>
-                  <th className="py-3 px-3">Attendance Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/60">
-                {filteredRollups.map((r) => (
-                  <tr key={r.id} className="hover:bg-neutral-800/40 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="flex items-center gap-3">
-                        <img src={r.avatar} alt={r.employeeName} className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
-                        <div>
-                          <p className="font-semibold text-white">{r.employeeName}</p>
-                          <p className="text-[10px] text-neutral-400 font-mono">{r.employeeCode} • {r.department}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-neutral-300">
-                      {r.firstIn ? new Date(r.firstIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono text-neutral-300">
-                      {r.lastOut ? new Date(r.lastOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (r.firstIn ? <span className="text-emerald-400 font-medium">Inside Now</span> : '—')}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono font-medium text-white">
-                      {r.totalHours} hrs <span className="text-neutral-500 font-normal">/ {r.expectedHours}h</span>
-                    </td>
-                    <td className="py-3.5 px-3 font-mono">
-                      {r.lateMinutes > 0 ? (
-                        <span className="text-amber-400 font-bold">+{r.lateMinutes} min late</span>
-                      ) : (
-                        <span className="text-emerald-400">Punctual</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3 font-mono">
-                      {r.overtimeHours > 0 ? (
-                        <span className="text-indigo-400 font-bold">+{r.overtimeHours}h OT</span>
-                      ) : (
-                        <span className="text-neutral-500">0h</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        r.status === 'ON_TIME' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                        r.status === 'LATE' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                        r.status === 'OVERTIME' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
-                        r.status === 'ON_LEAVE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
-                        'bg-neutral-800 text-neutral-400'
-                      }`}>
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          const emp = employees.find(e => e.id === r.employeeId);
-                          if (emp) setSelectedEmployeeForBadge(emp);
-                        }}
-                        className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white"
-                        title="View Badge"
-                      >
-                        <Award className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
+          {filteredRollups.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
+                    <th className="py-3 px-4">Employee</th>
+                    <th className="py-3 px-3">First In</th>
+                    <th className="py-3 px-3">Last Out</th>
+                    <th className="py-3 px-3">Logged Hours</th>
+                    <th className="py-3 px-3">Lateness</th>
+                    <th className="py-3 px-3">Overtime</th>
+                    <th className="py-3 px-3">Attendance Status</th>
+                    <th className="py-3 px-4 text-right">Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {filteredRollups.map((r) => (
+                    <tr key={r.id} className="hover:bg-neutral-800/40 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <img src={r.avatar} alt={r.employeeName} className="w-8 h-8 rounded-full object-cover border border-neutral-700" />
+                          <div>
+                            <p className="font-semibold text-white">{r.employeeName}</p>
+                            <p className="text-[10px] text-neutral-400 font-mono">{r.employeeCode} • {r.department}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-neutral-300">
+                        {r.firstIn ? new Date(r.firstIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono text-neutral-300">
+                        {r.lastOut ? new Date(r.lastOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (r.firstIn ? <span className="text-emerald-400 font-medium">Inside Now</span> : '—')}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono font-medium text-white">
+                        {r.totalHours} hrs <span className="text-neutral-500 font-normal">/ {r.expectedHours}h</span>
+                      </td>
+                      <td className="py-3.5 px-3 font-mono">
+                        {r.lateMinutes > 0 ? (
+                          <span className="text-amber-400 font-bold">+{r.lateMinutes} min late</span>
+                        ) : (
+                          <span className="text-emerald-400">Punctual</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3 font-mono">
+                        {r.overtimeHours > 0 ? (
+                          <span className="text-indigo-400 font-bold">+{r.overtimeHours}h OT</span>
+                        ) : (
+                          <span className="text-neutral-500">0h</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          r.status === 'ON_TIME' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                          r.status === 'LATE' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                          r.status === 'OVERTIME' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
+                          r.status === 'ON_LEAVE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                          'bg-neutral-800 text-neutral-400'
+                        }`}>
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <button
+                          onClick={() => {
+                            const emp = employees.find(e => e.id === r.employeeId);
+                            if (emp) setSelectedEmployeeForBadge(emp);
+                          }}
+                          className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white"
+                          title="View Badge"
+                        >
+                          <Award className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Scan}
+              title="No Attendance Rollups"
+              description="Attendance rollups are automatically compiled from gate access scans, recording arrival times, lateness, and overtime."
+              actionText="Open QR Badge Scanner"
+              onAction={() => setIsQRScannerOpen(true)}
+            />
+          )}
         </div>
       )}
 
@@ -400,61 +411,71 @@ export const AccessAndAttendanceModule: React.FC = () => {
             </select>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
-                  <th className="py-3 px-4">Event ID / Hash</th>
-                  <th className="py-3 px-4">Timestamp</th>
-                  <th className="py-3 px-4">Employee</th>
-                  <th className="py-3 px-3">Direction</th>
-                  <th className="py-3 px-4">Access Gate</th>
-                  <th className="py-3 px-3">Method</th>
-                  <th className="py-3 px-4">Verification</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/60 font-mono">
-                {filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-neutral-800/40 transition-colors">
-                    <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
-                      {log.id.slice(0, 14)}...
-                    </td>
-                    <td className="py-3.5 px-4 text-white text-xs">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-4 font-sans">
-                      <div className="flex items-center gap-2.5">
-                        <img src={log.avatar} alt={log.employeeName} className="w-6 h-6 rounded-full object-cover" />
-                        <div>
-                          <p className="font-semibold text-white">{log.employeeName}</p>
-                          <p className="text-[10px] text-neutral-400 font-mono">{log.employeeCode}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-3">
-                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                        log.scanType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                      }`}>
-                        {log.scanType}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-sans text-neutral-300">
-                      {log.gate}
-                    </td>
-                    <td className="py-3.5 px-3 text-neutral-400 text-[11px]">
-                      {log.method}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className="inline-flex items-center gap-1 text-emerald-400 text-[11px]">
-                        <ShieldCheck className="w-3.5 h-3.5" />
-                        Signed & Verified
-                      </span>
-                    </td>
+          {filteredLogs.length > 0 ? (
+            <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
+                    <th className="py-3 px-4">Event ID / Hash</th>
+                    <th className="py-3 px-4">Timestamp</th>
+                    <th className="py-3 px-4">Employee</th>
+                    <th className="py-3 px-3">Direction</th>
+                    <th className="py-3 px-4">Access Gate</th>
+                    <th className="py-3 px-3">Method</th>
+                    <th className="py-3 px-4">Verification</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60 font-mono">
+                  {filteredLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-neutral-800/40 transition-colors">
+                      <td className="py-3.5 px-4 text-neutral-400 text-[11px]">
+                        {log.id.slice(0, 14)}...
+                      </td>
+                      <td className="py-3.5 px-4 text-white text-xs">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                      <td className="py-3.5 px-4 font-sans">
+                        <div className="flex items-center gap-2.5">
+                          <img src={log.avatar} alt={log.employeeName} className="w-6 h-6 rounded-full object-cover" />
+                          <div>
+                            <p className="font-semibold text-white">{log.employeeName}</p>
+                            <p className="text-[10px] text-neutral-400 font-mono">{log.employeeCode}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                          log.scanType === 'IN' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
+                        }`}>
+                          {log.scanType}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-sans text-neutral-300">
+                        {log.gate}
+                      </td>
+                      <td className="py-3.5 px-3 text-neutral-400 text-[11px]">
+                        {log.method}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1 text-emerald-400 text-[11px]">
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Signed & Verified
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <EmptyState
+              icon={Scan}
+              title="No Access Event Logs"
+              description="Cryptographic NFC badges, turnstile QR gates, and simulator scan events will stream here live."
+              actionText="Trigger Simulation Scan"
+              onAction={() => setIsQRScannerOpen(true)}
+            />
+          )}
         </div>
       )}
 
@@ -473,35 +494,45 @@ export const AccessAndAttendanceModule: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {currentlyInsideEmployees.map((emp) => (
-              <div key={emp.id} className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <img src={emp.avatar} alt={emp.firstName} className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500" />
-                  <div>
-                    <h4 className="text-xs font-bold text-white">{emp.firstName} {emp.lastName}</h4>
-                    <p className="text-[11px] text-neutral-400">{emp.position}</p>
-                    <p className="text-[10px] text-indigo-400 font-mono">{emp.code} • {emp.department}</p>
+          {currentlyInsideEmployees.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentlyInsideEmployees.map((emp) => (
+                <div key={emp.id} className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={emp.avatar} alt={emp.firstName} className="w-11 h-11 rounded-full object-cover border-2 border-emerald-500" />
+                    <div>
+                      <h4 className="text-xs font-bold text-white">{emp.firstName} {emp.lastName}</h4>
+                      <p className="text-[11px] text-neutral-400">{emp.position}</p>
+                      <p className="text-[10px] text-indigo-400 font-mono">{emp.code} • {emp.department}</p>
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Inside
+                    </span>
+                    <button
+                      onClick={() => {
+                        recordScan({ employeeId: emp.id, scanType: 'OUT', gate: 'Main Lobby Turnstile 01' });
+                      }}
+                      className="block mt-2 text-[10px] text-amber-400 hover:text-amber-300 font-medium cursor-pointer"
+                    >
+                      Clock OUT &rarr;
+                    </button>
                   </div>
                 </div>
-
-                <div className="text-right">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Inside
-                  </span>
-                  <button
-                    onClick={() => {
-                      recordScan({ employeeId: emp.id, scanType: 'OUT', gate: 'Main Lobby Turnstile 01' });
-                    }}
-                    className="block mt-2 text-[10px] text-amber-400 hover:text-amber-300 font-medium cursor-pointer"
-                  >
-                    Clock OUT &rarr;
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={Building2}
+              title="Premises Currently Cleared"
+              description="No personnel are currently detected inside the facility. When employees tap IN at entry turnstiles, they will appear here in real-time."
+              actionText="Open QR Scanner"
+              onAction={() => setIsQRScannerOpen(true)}
+            />
+          )}
         </div>
       )}
 

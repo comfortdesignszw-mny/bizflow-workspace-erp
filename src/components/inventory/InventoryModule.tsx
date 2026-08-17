@@ -16,6 +16,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Asset, AssetStatus } from '../../types/erp';
+import { EmptyState } from '../common/EmptyState';
 
 export const InventoryModule: React.FC = () => {
   const {
@@ -134,71 +135,81 @@ export const InventoryModule: React.FC = () => {
       </div>
 
       {/* Asset Table */}
-      <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
-              <th className="py-3 px-4">Asset Tag</th>
-              <th className="py-3 px-4">Equipment Name</th>
-              <th className="py-3 px-3">Category</th>
-              <th className="py-3 px-3">Serial Number</th>
-              <th className="py-3 px-3">Status</th>
-              <th className="py-3 px-4">Assigned Custody</th>
-              <th className="py-3 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-800/60 font-mono">
-            {filteredAssets.map((ast) => (
-              <tr key={ast.id} className="hover:bg-neutral-800/40 transition-colors">
-                <td className="py-3.5 px-4 font-bold text-cyan-400 text-xs">
-                  {ast.code}
-                </td>
-                <td className="py-3.5 px-4 font-sans font-medium text-white">
-                  {ast.name}
-                  <span className="block text-[10px] text-neutral-500 font-mono">{ast.location}</span>
-                </td>
-                <td className="py-3.5 px-3 font-sans text-neutral-300">
-                  {ast.category}
-                </td>
-                <td className="py-3.5 px-3 text-neutral-400">
-                  {ast.serialNumber}
-                </td>
-                <td className="py-3.5 px-3 font-sans">
-                  <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                    ast.status === 'Assigned' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
-                    ast.status === 'Available' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                    'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                  }`}>
-                    {ast.status}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4 font-sans">
-                  {ast.assignedToName ? (
-                    <div>
-                      <p className="font-semibold text-white">{ast.assignedToName}</p>
-                      <p className="text-[10px] text-neutral-500 font-mono">Since {ast.assignedDate}</p>
-                    </div>
-                  ) : (
-                    <span className="text-neutral-500 italic">In Storage Locker</span>
-                  )}
-                </td>
-                <td className="py-3.5 px-4 text-right font-sans">
-                  <button
-                    onClick={() => {
-                      setTargetAsset(ast);
-                      setAssignEmpId(ast.assignedToId || '');
-                      setIsAssignModalOpen(true);
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-cyan-400 hover:text-cyan-300 font-medium text-xs ml-auto"
-                  >
-                    {ast.assignedToId ? 'Reassign' : 'Assign'}
-                  </button>
-                </td>
+      {filteredAssets.length === 0 ? (
+        <EmptyState
+          icon={Package}
+          title={assets.length === 0 ? "No IT Hardware & Physical Assets" : "No Assets Found"}
+          description={assets.length === 0 ? "Register developer laptops, office monitors, network routers, server hardware, and assign custodian personnel." : "No asset records match your filter criteria."}
+          actionText={assets.length === 0 ? "+ Register Asset" : "Clear Filters"}
+          onAction={assets.length === 0 ? () => setIsAddModalOpen(true) : () => { setSearchQuery(''); setSelectedCategory('ALL'); setSelectedStatus('ALL'); }}
+        />
+      ) : (
+        <div className="overflow-x-auto rounded-2xl bg-neutral-900 border border-neutral-800">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-neutral-800 bg-neutral-950/60 text-neutral-400 font-semibold uppercase text-[10px]">
+                <th className="py-3 px-4">Asset Tag</th>
+                <th className="py-3 px-4">Equipment Name</th>
+                <th className="py-3 px-3">Category</th>
+                <th className="py-3 px-3">Serial Number</th>
+                <th className="py-3 px-3">Status</th>
+                <th className="py-3 px-4">Assigned Custody</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-neutral-800/60 font-mono">
+              {filteredAssets.map((ast) => (
+                <tr key={ast.id} className="hover:bg-neutral-800/40 transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-cyan-400 text-xs">
+                    {ast.code}
+                  </td>
+                  <td className="py-3.5 px-4 font-sans font-medium text-white">
+                    {ast.name}
+                    <span className="block text-[10px] text-neutral-500 font-mono">{ast.location}</span>
+                  </td>
+                  <td className="py-3.5 px-3 font-sans text-neutral-300">
+                    {ast.category}
+                  </td>
+                  <td className="py-3.5 px-3 text-neutral-400">
+                    {ast.serialNumber}
+                  </td>
+                  <td className="py-3.5 px-3 font-sans">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                      ast.status === 'Assigned' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                      ast.status === 'Available' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                      'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                    }`}>
+                      {ast.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 font-sans">
+                    {ast.assignedToName ? (
+                      <div>
+                        <p className="font-semibold text-white">{ast.assignedToName}</p>
+                        <p className="text-[10px] text-neutral-500 font-mono">Since {ast.assignedDate}</p>
+                      </div>
+                    ) : (
+                      <span className="text-neutral-500 italic">In Storage Locker</span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-sans">
+                    <button
+                      onClick={() => {
+                        setTargetAsset(ast);
+                        setAssignEmpId(ast.assignedToId || '');
+                        setIsAssignModalOpen(true);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-cyan-400 hover:text-cyan-300 font-medium text-xs ml-auto"
+                    >
+                      {ast.assignedToId ? 'Reassign' : 'Assign'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Assign Modal */}
       {isAssignModalOpen && targetAsset && (
