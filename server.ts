@@ -42,33 +42,41 @@ async function startServer() {
     });
   });
 
-  // Helper for generating content with multi-model fallback and error recovery
+  // Helper for generating content with multi-model fallback, retry backoff, and error recovery
   async function generateWithFallback(ai: GoogleGenAI, primaryModel: string, configObj: any) {
     const candidateModels = [
+      'gemini-3.1-flash-lite',
       primaryModel,
       'gemini-3.7-flash',
       'gemini-flash-latest',
-      'gemini-3.1-flash-lite',
     ].filter(Boolean);
 
     const uniqueModels = Array.from(new Set(candidateModels));
-    let lastError = null;
 
     for (const model of uniqueModels) {
-      try {
-        const res = await ai.models.generateContent({
-          ...configObj,
-          model,
-        });
-        return res;
-      } catch (err: any) {
-        lastError = err;
-        const msg = err?.message || String(err);
-        // Clean notification for quota or model deprecation without uncaught crashes
-        console.warn(`[AI Engine] Model ${model} fallback (${err?.status || 'Rate/Quota'}): ${msg.slice(0, 100)}`);
+      // Up to 2 attempts per candidate model with backoff for transient 503/429 demand spikes
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 400 * attempt));
+          }
+          const res = await ai.models.generateContent({
+            ...configObj,
+            model,
+          });
+          if (res && res.text) {
+            return res;
+          }
+        } catch (err: any) {
+          const status = err?.status || err?.code || 500;
+          console.info(`[AI Engine] Attempting model recovery: ${model} (status ${status})`);
+          if (status !== 503 && status !== 429) {
+            break;
+          }
+        }
       }
     }
-    throw lastError || new Error('All Gemini models rate limited or quota exceeded');
+    return null;
   }
 
   // AI Resume Scoring & ATS Match Analysis Endpoint
@@ -156,13 +164,13 @@ Evaluate and return a structured JSON response with:
         }
       });
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
+      const parsed = JSON.parse(response?.text?.trim() || '{}');
       if (parsed.matchScore && parsed.analysis) {
         return res.json(parsed);
       }
       return res.json(computeHeuristicScore());
     } catch (err: any) {
-      console.warn('Fallback triggered for /api/ai/cv-score:', err?.message || err);
+      console.info('Using heuristic fallback for /api/ai/cv-score:', err?.message || err);
       // Return high quality heuristic payload so client never breaks
       res.json(computeHeuristicScore());
     }
@@ -221,13 +229,13 @@ Provide:
         }
       });
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
+      const parsed = JSON.parse(response?.text?.trim() || '{}');
       if (parsed.briefing && Array.isArray(parsed.recommendations) && parsed.recommendations.length > 0) {
         return res.json(parsed);
       }
       return res.json(computeHeuristicBriefing());
     } catch (err: any) {
-      console.warn('Fallback triggered for /api/ai/executive-briefing:', err?.message || err);
+      console.info('Using heuristic fallback for /api/ai/executive-briefing:', err?.message || err);
       res.json(computeHeuristicBriefing());
     }
   });
@@ -283,13 +291,13 @@ Answer concisely, accurately, and with professional enterprise tone. If asking f
         contents: prompt,
       });
 
-      const replyText = response.text?.trim();
+      const replyText = response?.text?.trim();
       if (replyText) {
         return res.json({ reply: replyText });
       }
       return res.json({ reply: computeHeuristicCopilotReply(userQuery, contextData) });
     } catch (err: any) {
-      console.warn('Fallback triggered for /api/ai/copilot:', err?.message || err);
+      console.info('Using heuristic fallback for /api/ai/copilot:', err?.message || err);
       res.json({ reply: computeHeuristicCopilotReply(userQuery, contextData) });
     }
   });
@@ -459,13 +467,13 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
         }
       });
 
-      const parsed = JSON.parse(response.text?.trim() || '{}');
+      const parsed = JSON.parse(response?.text?.trim() || '{}');
       if (parsed.summary && Array.isArray(parsed.trends)) {
         return res.json(parsed);
       }
       return res.json(computeHeuristicTrends());
     } catch (err: any) {
-      console.warn('Fallback triggered for /api/ai/workforce-trends:', err?.message || err);
+      console.info('Using heuristic fallback for /api/ai/workforce-trends:', err?.message || err);
       res.json(computeHeuristicTrends());
     }
   });
@@ -518,6 +526,21 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
       syncedAt: new Date().toISOString()
     });
   });
+
+  // Explicitly serve public assets with CORS and PWA headers
+  const publicDir = path.join(process.cwd(), 'public');
+  app.use(express.static(publicDir, {
+    setHeaders: (res, filePath) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      if (filePath.endsWith('.webmanifest') || filePath.endsWith('manifest.json')) {
+        res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+      } else if (filePath.endsWith('sw.js')) {
+        res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        res.setHeader('Service-Worker-Allowed', '/');
+      }
+    }
+  }));
 
   // Vite middleware in development vs Static files in production
   if (process.env.NODE_ENV !== 'production') {

@@ -97,7 +97,7 @@ export interface AttendanceRollup {
   adjustedReason?: string;
 }
 
-export type PayrollStatus = 'draft' | 'approved' | 'paid';
+export type PayrollStatus = 'pending' | 'draft' | 'approved' | 'paid';
 
 export interface AllowanceItem {
   id: string;
@@ -137,6 +137,9 @@ export interface PayslipItem {
   paymentMethod: string;
   status: PayrollStatus;
   generatedDate: string;
+  periodMonth?: string;
+  periodStart?: string;
+  periodEnd?: string;
 }
 
 export interface PayrollRun {
@@ -167,14 +170,26 @@ export interface JobOpening {
   department: string;
   location: string;
   employmentType: EmploymentType;
+  type?: EmploymentType; // alias for backwards compatibility
   salaryRange: string;
   experienceLevel: string;
   openPositions: number;
   status: 'Active' | 'Draft' | 'Closed';
   requirements: string[];
+  qualifications?: string[];
+  skills?: string[];
   description: string;
   postedDate: string;
+  applicationDeadline?: string;
   applicantsCount: number;
+}
+
+export interface ApplicantFile {
+  name: string;
+  size: number;
+  type: string;
+  dataUrl?: string;
+  uploadedAt?: string;
 }
 
 export interface Applicant {
@@ -184,7 +199,10 @@ export interface Applicant {
   name: string;
   email: string;
   phone: string;
-  currentCompany: string;
+  gender?: string; // Sex / Gender
+  maritalStatus?: string; // Marital status
+  nationalId?: string; // National ID or passport number
+  currentCompany?: string;
   yearsOfExperience: number;
   stage: RecruitmentStage;
   aiMatchScore?: number;
@@ -197,6 +215,10 @@ export interface Applicant {
   appliedDate: string;
   interviewDate?: string;
   notes: { id: string; author: string; text: string; date: string }[];
+  cvFile?: ApplicantFile;
+  certificateFiles?: ApplicantFile[];
+  referenceFiles?: ApplicantFile[];
+  coverLetter?: string;
 }
 
 export type ProjectStatus = 'Planning' | 'In Progress' | 'Paused' | 'Finished';

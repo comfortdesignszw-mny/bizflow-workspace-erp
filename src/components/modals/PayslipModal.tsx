@@ -1,6 +1,7 @@
 import React from 'react';
 import { useERP } from '../../context/ERPContext';
 import { X, Printer, CheckCircle2, ShieldAlert, Building, DollarSign, Download } from 'lucide-react';
+import { exportIndividualPayslipPDF } from '../../utils/pdfExport';
 
 export const PayslipModal: React.FC = () => {
   const {
@@ -14,6 +15,10 @@ export const PayslipModal: React.FC = () => {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    exportIndividualPayslipPDF(ps, settings);
   };
 
   return (
@@ -31,16 +36,24 @@ export const PayslipModal: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPDF}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors flex items-center gap-1.5 text-xs font-semibold shadow-xs cursor-pointer"
+              id="btn-download-payslip-pdf"
+            >
+              <Download className="w-4 h-4" />
+              <span>Download PDF</span>
+            </button>
+            <button
               onClick={handlePrint}
-              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-1.5 text-xs"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors flex items-center gap-1.5 text-xs cursor-pointer"
               id="btn-print-payslip"
             >
               <Printer className="w-4 h-4" />
-              <span>Print / PDF</span>
+              <span>Print</span>
             </button>
             <button
               onClick={() => setSelectedPayslipForModal(null)}
-              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>

@@ -7,6 +7,9 @@ import {
   AttendanceRollup,
   PayrollRun,
   PayslipItem,
+  PayrollStatus,
+  AllowanceItem,
+  DeductionItem,
   JobOpening,
   Applicant,
   Project,
@@ -149,14 +152,35 @@ interface ERPContextType {
 
   // Actions: Payroll
   generatePayrollRun: (monthStr: string, periodStart: string, periodEnd: string) => PayrollRun;
-  updatePayrollStatus: (runId: string, newStatus: 'draft' | 'approved' | 'paid') => void;
+  updatePayrollStatus: (runId: string, newStatus: PayrollStatus) => void;
   updatePayslipOverrides: (runId: string, payslipId: string, updates: Partial<PayslipItem>) => void;
+  deletePayrollRun: (runId: string) => void;
+  createIndividualPayroll: (data: {
+    employeeId: string;
+    periodMonth: string;
+    periodStart: string;
+    periodEnd: string;
+    baseSalary?: number;
+    workingDays?: number;
+    presentDays?: number;
+    absentDays?: number;
+    overtimeHours?: number;
+    overtimeRate?: number;
+    allowances?: AllowanceItem[];
+    deductions?: DeductionItem[];
+    status?: PayrollStatus;
+  }) => PayslipItem;
+  updateIndividualPayroll: (runId: string, payslipId: string, updates: Partial<PayslipItem>) => void;
+  deleteIndividualPayroll: (runId: string, payslipId: string) => void;
+  updateIndividualPayrollStatus: (runId: string, payslipId: string, newStatus: PayrollStatus) => void;
 
   // Actions: Recruitment & ATS
   addJobOpening: (job: Omit<JobOpening, 'id' | 'postedDate' | 'applicantsCount'>) => JobOpening;
   updateJobOpening: (id: string, updates: Partial<JobOpening>) => void;
+  deleteJobOpening: (id: string) => void;
   addApplicant: (app: Omit<Applicant, 'id' | 'appliedDate' | 'rating' | 'notes'>) => Applicant;
   updateApplicantStage: (id: string, newStage: RecruitmentStage) => void;
+  deleteApplicant: (id: string) => void;
   convertApplicantToEmployee: (applicantId: string) => Employee | null;
   scoreApplicantWithAI: (applicantId: string) => Promise<boolean>;
 
@@ -266,8 +290,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
   const [lastSyncTime, setLastSyncTime] = useState<string>(() => new Date().toLocaleTimeString());
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [isInstallPromptAvailable, setIsInstallPromptAvailable] = useState<boolean>(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(() => {
+    if (typeof window !== 'undefined' && (window as any).__deferredPWAInstallPrompt) {
+      return (window as any).__deferredPWAInstallPrompt;
+    }
+    return null;
+  });
+  const [isInstallPromptAvailable, setIsInstallPromptAvailable] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && (window as any).__deferredPWAInstallPrompt) {
+      return true;
+    }
+    return false;
+  });
 
   const [currentUser, setCurrentUser] = useState<UserPersona>(() => getLocalSandbox('user', INITIAL_PERSONAS[0]));
   const [activeModule, setActiveModule] = useState<string>('dashboard');
@@ -379,18 +413,28 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
+      (window as any).__deferredPWAInstallPrompt = e;
       setDeferredPrompt(e);
       setIsInstallPromptAvailable(true);
+    };
+
+    const handlePwaInstallReady = (e: any) => {
+      if (e.detail) {
+        setDeferredPrompt(e.detail);
+        setIsInstallPromptAvailable(true);
+      }
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('pwa-install-ready', handlePwaInstallReady);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('pwa-install-ready', handlePwaInstallReady);
     };
   }, []);
 
@@ -536,16 +580,20 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // PWA Native Installation Trigger
   const installPWA = useCallback(async () => {
-    if (deferredPrompt) {
+    const promptEvent = deferredPrompt || (typeof window !== 'undefined' ? (window as any).__deferredPWAInstallPrompt : null);
+    if (promptEvent && typeof promptEvent.prompt === 'function') {
       try {
-        deferredPrompt.prompt();
-        const choiceResult = await deferredPrompt.userChoice;
-        if (choiceResult.outcome === 'accepted') {
+        await promptEvent.prompt();
+        const choiceResult = await promptEvent.userChoice;
+        if (choiceResult && choiceResult.outcome === 'accepted') {
           console.log('[PWA] User accepted the install prompt');
           setIsInstallPromptAvailable(false);
           setIsPWAInstallModalOpen(false);
+          if (typeof window !== 'undefined') {
+            (window as any).__deferredPWAInstallPrompt = null;
+          }
+          setDeferredPrompt(null);
         }
-        setDeferredPrompt(null);
       } catch (e) {
         console.warn('[PWA] Installation trigger error:', e);
         setIsPWAInstallModalOpen(true);
@@ -920,7 +968,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newRun;
   }, [employees, settings, logAudit]);
 
-  const updatePayrollStatus = useCallback((runId: string, newStatus: 'draft' | 'approved' | 'paid') => {
+  const updatePayrollStatus = useCallback((runId: string, newStatus: PayrollStatus) => {
     setPayrollRuns(prev => prev.map(run => {
       if (run.id !== runId) return run;
       const now = new Date().toISOString();
@@ -935,6 +983,191 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
     logAudit('PAYROLL_STATUS_CHANGED', 'Payroll Engine', `Payroll run #${runId} transitioned to ${newStatus.toUpperCase()}.`);
   }, [currentUser.name, logAudit]);
+
+  const deletePayrollRun = useCallback((runId: string) => {
+    setPayrollRuns(prev => prev.filter(r => r.id !== runId));
+    logAudit('PAYROLL_RUN_DELETED', 'Payroll Engine', `Deleted payroll run #${runId}.`, 'WARNING');
+  }, [logAudit]);
+
+  const createIndividualPayroll = useCallback((data: {
+    employeeId: string;
+    periodMonth: string;
+    periodStart: string;
+    periodEnd: string;
+    baseSalary?: number;
+    workingDays?: number;
+    presentDays?: number;
+    absentDays?: number;
+    overtimeHours?: number;
+    overtimeRate?: number;
+    allowances?: AllowanceItem[];
+    deductions?: DeductionItem[];
+    status?: PayrollStatus;
+  }): PayslipItem => {
+    const emp = employees.find(e => e.id === data.employeeId);
+    const baseSalary = data.baseSalary ?? (emp ? emp.baseSalary : 5000);
+    const hourlyRate = emp ? emp.hourlyRate : Math.round(baseSalary / 160);
+    const workingDays = data.workingDays ?? 22;
+    const presentDays = data.presentDays ?? 21;
+    const absentDays = data.absentDays ?? 1;
+    const overtimeHours = data.overtimeHours ?? 0;
+    const overtimeRate = data.overtimeRate ?? Math.round(hourlyRate * settings.overtimeMultiplier);
+    const overtimePay = overtimeHours * overtimeRate;
+    const allowances = data.allowances || [
+      { id: `al-${Date.now()}-1`, name: 'Workplace Connectivity & Travel', amount: 250 }
+    ];
+    const deductions = data.deductions || [];
+    const status: PayrollStatus = data.status || 'pending';
+
+    const grossPay = baseSalary + overtimePay + allowances.reduce((s, a) => s + a.amount, 0);
+    const taxDeduction = Math.round(grossPay * (settings.defaultTaxRate / 100));
+    const pensionDeduction = Math.round(grossPay * 0.05);
+    const healthInsuranceDeduction = 220;
+    const totalDeductions = taxDeduction + pensionDeduction + healthInsuranceDeduction + deductions.reduce((s, d) => s + d.amount, 0);
+    const netPay = grossPay - totalDeductions;
+
+    const newPayslip: PayslipItem = {
+      id: `ps-${data.employeeId}-${Date.now()}`,
+      employeeId: data.employeeId,
+      employeeCode: emp ? emp.code : 'EMP-NEW',
+      employeeName: emp ? `${emp.firstName} ${emp.lastName}` : 'Employee Record',
+      department: emp ? emp.department : 'Operations',
+      position: emp ? emp.position : 'Staff Specialist',
+      bankDetails: emp ? emp.bankDetails : { bankName: 'Standard Chartered', accountNumber: '9988776655', routingNumber: '021000021' },
+      baseSalary,
+      workingDays,
+      presentDays,
+      absentDays,
+      overtimeHours,
+      overtimeRate,
+      overtimePay,
+      allowances,
+      deductions,
+      grossPay,
+      taxDeduction,
+      pensionDeduction,
+      healthInsuranceDeduction,
+      totalDeductions,
+      netPay,
+      paymentMethod: 'Direct Bank Transfer (ACH)',
+      status,
+      generatedDate: new Date().toISOString().split('T')[0],
+      periodMonth: data.periodMonth,
+      periodStart: data.periodStart,
+      periodEnd: data.periodEnd
+    };
+
+    setPayrollRuns(prev => {
+      const existingRunIndex = prev.findIndex(r => r.periodMonth.toLowerCase() === data.periodMonth.toLowerCase());
+      if (existingRunIndex >= 0) {
+        const updated = [...prev];
+        const existingRun = updated[existingRunIndex];
+        const updatedPayslips = [newPayslip, ...existingRun.payslips.filter(p => p.employeeId !== data.employeeId)];
+        const totalGross = updatedPayslips.reduce((s, p) => s + p.grossPay, 0);
+        const totalDeductions = updatedPayslips.reduce((s, p) => s + p.totalDeductions, 0);
+        const totalNet = updatedPayslips.reduce((s, p) => s + p.netPay, 0);
+        updated[existingRunIndex] = {
+          ...existingRun,
+          employeeCount: updatedPayslips.length,
+          totalGross,
+          totalDeductions,
+          totalNet,
+          payslips: updatedPayslips
+        };
+        return updated;
+      } else {
+        const newRun: PayrollRun = {
+          id: `run-${Date.now()}`,
+          code: `PAY-${data.periodMonth.toUpperCase().replace(/\s+/g, '-')}`,
+          title: `${data.periodMonth} Workforce Payroll Cycle`,
+          periodMonth: data.periodMonth,
+          periodStart: data.periodStart,
+          periodEnd: data.periodEnd,
+          status: status === 'paid' ? 'paid' : (status === 'approved' ? 'approved' : 'pending'),
+          totalGross: grossPay,
+          totalDeductions,
+          totalNet: netPay,
+          employeeCount: 1,
+          createdAt: new Date().toISOString(),
+          currency: settings.currency,
+          payslips: [newPayslip]
+        };
+        return [newRun, ...prev];
+      }
+    });
+
+    logAudit('INDIVIDUAL_PAYROLL_CREATED', 'Payroll Engine', `Created individual payroll for ${newPayslip.employeeName} (${data.periodMonth}) - Net: $${netPay.toLocaleString()}.`);
+    return newPayslip;
+  }, [employees, settings, logAudit]);
+
+  const updateIndividualPayroll = useCallback((runId: string, payslipId: string, updates: Partial<PayslipItem>) => {
+    setPayrollRuns(prev => prev.map(run => {
+      if (run.id !== runId) return run;
+      const updatedPayslips = run.payslips.map(ps => {
+        if (ps.id !== payslipId) return ps;
+        const merged = { ...ps, ...updates };
+        const gross = merged.baseSalary + merged.overtimePay + merged.allowances.reduce((s, a) => s + a.amount, 0);
+        const tax = Math.round(gross * (settings.defaultTaxRate / 100));
+        const pension = Math.round(gross * 0.05);
+        const deductionsTot = tax + pension + merged.healthInsuranceDeduction + merged.deductions.reduce((s, d) => s + d.amount, 0);
+        return {
+          ...merged,
+          grossPay: gross,
+          taxDeduction: tax,
+          pensionDeduction: pension,
+          totalDeductions: deductionsTot,
+          netPay: gross - deductionsTot
+        };
+      });
+      const totalGross = updatedPayslips.reduce((s, p) => s + p.grossPay, 0);
+      const totalDeductions = updatedPayslips.reduce((s, p) => s + p.totalDeductions, 0);
+      return {
+        ...run,
+        totalGross,
+        totalDeductions,
+        totalNet: totalGross - totalDeductions,
+        payslips: updatedPayslips
+      };
+    }));
+    logAudit('INDIVIDUAL_PAYROLL_UPDATED', 'Payroll Engine', `Updated payslip #${payslipId} in run #${runId}.`);
+  }, [settings.defaultTaxRate, logAudit]);
+
+  const deleteIndividualPayroll = useCallback((runId: string, payslipId: string) => {
+    setPayrollRuns(prev => prev.map(run => {
+      if (run.id !== runId) return run;
+      const filtered = run.payslips.filter(p => p.id !== payslipId);
+      const totalGross = filtered.reduce((s, p) => s + p.grossPay, 0);
+      const totalDeductions = filtered.reduce((s, p) => s + p.totalDeductions, 0);
+      return {
+        ...run,
+        employeeCount: filtered.length,
+        totalGross,
+        totalDeductions,
+        totalNet: totalGross - totalDeductions,
+        payslips: filtered
+      };
+    }).filter(run => run.payslips.length > 0 || run.id === runId));
+    logAudit('INDIVIDUAL_PAYROLL_DELETED', 'Payroll Engine', `Deleted individual payslip #${payslipId}.`, 'WARNING');
+  }, [logAudit]);
+
+  const updateIndividualPayrollStatus = useCallback((runId: string, payslipId: string, newStatus: PayrollStatus) => {
+    setPayrollRuns(prev => prev.map(run => {
+      if (run.id !== runId) return run;
+      const updatedPayslips = run.payslips.map(ps => {
+        if (ps.id !== payslipId) return ps;
+        return { ...ps, status: newStatus };
+      });
+      const allPaid = updatedPayslips.length > 0 && updatedPayslips.every(p => p.status === 'paid');
+      const allApproved = updatedPayslips.length > 0 && updatedPayslips.every(p => p.status === 'approved' || p.status === 'paid');
+      const computedRunStatus: PayrollStatus = allPaid ? 'paid' : (allApproved ? 'approved' : run.status);
+      return {
+        ...run,
+        status: computedRunStatus,
+        payslips: updatedPayslips
+      };
+    }));
+    logAudit('INDIVIDUAL_PAYROLL_STATUS_CHANGED', 'Payroll Engine', `Updated payslip #${payslipId} status to ${newStatus.toUpperCase()}.`);
+  }, [logAudit]);
 
   const updatePayslipOverrides = useCallback((runId: string, payslipId: string, updates: Partial<PayslipItem>) => {
     setPayrollRuns(prev => prev.map(run => {
@@ -985,6 +1218,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setJobOpenings(prev => prev.map(j => j.id === id ? { ...j, ...updates } : j));
   }, []);
 
+  const deleteJobOpening = useCallback((id: string) => {
+    setJobOpenings(prev => prev.filter(j => j.id !== id));
+    logAudit('JOB_DELETED', 'Recruitment ATS', `Deleted job opening #${id}.`, 'WARNING');
+  }, [logAudit]);
+
   const addApplicant = useCallback((app: Omit<Applicant, 'id' | 'appliedDate' | 'rating' | 'notes'>): Applicant => {
     const newApp: Applicant = {
       ...app,
@@ -1013,6 +1251,17 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
     logAudit('APPLICANT_STAGE_UPDATED', 'Recruitment ATS', `Candidate #${id} moved to stage ${newStage}.`);
   }, [currentUser.name, logAudit]);
+
+  const deleteApplicant = useCallback((id: string) => {
+    setApplicants(prev => {
+      const target = prev.find(a => a.id === id);
+      if (target) {
+        setJobOpenings(jPrev => jPrev.map(j => j.id === target.jobOpeningId ? { ...j, applicantsCount: Math.max(0, j.applicantsCount - 1) } : j));
+      }
+      return prev.filter(a => a.id !== id);
+    });
+    logAudit('APPLICANT_DELETED', 'Recruitment ATS', `Removed applicant record #${id}.`, 'WARNING');
+  }, [logAudit]);
 
   const convertApplicantToEmployee = useCallback((applicantId: string): Employee | null => {
     const app = applicants.find(a => a.id === applicantId);
@@ -1697,10 +1946,17 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     generatePayrollRun,
     updatePayrollStatus,
     updatePayslipOverrides,
+    deletePayrollRun,
+    createIndividualPayroll,
+    updateIndividualPayroll,
+    deleteIndividualPayroll,
+    updateIndividualPayrollStatus,
     addJobOpening,
     updateJobOpening,
+    deleteJobOpening,
     addApplicant,
     updateApplicantStage,
+    deleteApplicant,
     convertApplicantToEmployee,
     scoreApplicantWithAI,
     addProject,

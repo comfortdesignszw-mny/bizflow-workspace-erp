@@ -1,17 +1,21 @@
 // BizFlow ERP Service Worker - Offline-First Caching Engine
-const CACHE_NAME = 'bizflow-erp-v2';
+const CACHE_NAME = 'bizflow-erp-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/manifest.webmanifest',
+  '/favicon.ico',
+  '/favicon.png',
+  '/favicon-96x96.png',
+  '/apple-touch-icon.png',
+  '/web-app-manifest-192x192.png',
+  '/web-app-manifest-512x512.png',
   '/icon.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
-  '/icons/icon-maskable-512x512.png',
-  '/favicon.ico',
-  '/favicon.png'
+  '/icons/icon-maskable-512x512.png'
 ];
 
 self.addEventListener('install', (event) => {

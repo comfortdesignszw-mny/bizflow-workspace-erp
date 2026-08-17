@@ -10,30 +10,42 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
-    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
-    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png" />
-    <link rel="mask-icon" href="/icons/icon-512x512.png" color="#2563eb" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/web-app-manifest-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/web-app-manifest-512x512.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/web-app-manifest-192x192.png" />
+    <link rel="apple-touch-icon" sizes="512x512" href="/web-app-manifest-512x512.png" />
+    <link rel="mask-icon" href="/icons/icon-maskable-512x512.png" color="#2563eb" />
     
     <!-- PWA Theme Meta -->
-    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="theme-color" content="#06071b" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="BizFlow ERP" />
+    <meta name="application-name" content="BizFlow ERP" />
     
     <!-- Social Sharing -->
     <meta property="og:title" content="BizFlow Enterprise ERP" />
     <meta property="og:description" content="Offline-First Enterprise Resource Planning & Workforce Management Platform" />
-    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:image" content="/web-app-manifest-512x512.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+    <meta name="twitter:image" content="/web-app-manifest-512x512.png" />
   </head>
   <body class="bg-neutral-950 text-neutral-100 antialiased selection:bg-blue-600 selection:text-white">
     <div id="root"></div>
+    <script>
+      // Early capture of beforeinstallprompt to ensure no browser install event is missed
+      window.__deferredPWAInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.__deferredPWAInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-install-ready', { detail: e }));
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       // Register Service Worker for Offline-First PWA capabilities safely
