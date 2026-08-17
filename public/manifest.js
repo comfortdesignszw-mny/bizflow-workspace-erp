@@ -7,20 +7,42 @@ export const appManifest = {
   id: "/",
   display: "standalone",
   orientation: "any",
-  background_color: "#0a0a0a",
-  theme_color: "#2563eb",
+  background_color: "#06071b",
+  theme_color: "#06071b",
   icons: [
     {
-      src: "/icons/icon-192x192.png",
+      src: "/web-app-manifest-192x192.png",
       sizes: "192x192",
       type: "image/png",
       purpose: "any maskable"
     },
     {
-      src: "/icons/icon-512x512.png",
+      src: "/icons/web-app-manifest-192x192.png",
+      sizes: "192x192",
+      type: "image/png",
+      purpose: "any maskable"
+    },
+    {
+      src: "/web-app-manifest-512x512.png",
       sizes: "512x512",
       type: "image/png",
       purpose: "any maskable"
+    },
+    {
+      src: "/icons/web-app-manifest-512x512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any maskable"
+    },
+    {
+      src: "/apple-touch-icon.png",
+      sizes: "180x180",
+      type: "image/png"
+    },
+    {
+      src: "/favicon-96x96.png",
+      sizes: "96x96",
+      type: "image/png"
     },
     {
       src: "/icon.png",
@@ -41,3 +63,4 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(link);
   }
 }
+

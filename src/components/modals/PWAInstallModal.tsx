@@ -49,10 +49,16 @@ export const PWAInstallModal: React.FC = () => {
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-blue-500/20 border border-blue-500/30 shrink-0 bg-neutral-950 p-1 flex items-center justify-center">
               <img
-                src="/icons/icon-192x192.png"
+                src="/web-app-manifest-192x192.png"
                 alt="BizFlow ERP App Icon"
                 className="w-full h-full object-cover rounded-xl"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('favicon-96x96')) {
+                    target.src = '/favicon-96x96.png';
+                  }
+                }}
               />
             </div>
             <div>

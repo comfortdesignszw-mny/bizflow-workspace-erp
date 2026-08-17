@@ -91,9 +91,15 @@ export const SettingsModule: React.FC = () => {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-neutral-950 border border-neutral-700 p-1 flex items-center justify-center shrink-0">
               <img
-                src="/icons/icon-192x192.png"
+                src="/web-app-manifest-192x192.png"
                 alt="App Icon"
                 className="w-full h-full object-cover rounded-lg"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (!target.src.includes('favicon-96x96')) {
+                    target.src = '/favicon-96x96.png';
+                  }
+                }}
               />
             </div>
             <div>

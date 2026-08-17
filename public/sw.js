@@ -1,5 +1,5 @@
-// BizFlow ERP Service Worker - Offline-First Caching Engine
-const CACHE_NAME = 'bizflow-erp-v3';
+// BizFlow ERP Service Worker - Offline-First Caching & Resilient Icon Engine
+const CACHE_NAME = 'bizflow-erp-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -9,22 +9,31 @@ const STATIC_ASSETS = [
   '/favicon.png',
   '/favicon-96x96.png',
   '/apple-touch-icon.png',
+  '/apple-touch-icon-180x180.png',
   '/web-app-manifest-192x192.png',
   '/web-app-manifest-512x512.png',
   '/icon.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
-  '/icons/icon-maskable-512x512.png'
+  '/icons/icon-maskable-512x512.png',
+  '/icons/web-app-manifest-192x192.png',
+  '/icons/web-app-manifest-512x512.png',
+  '/icons/favicon-96x96.png',
+  '/icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching offline application shell and icons');
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('[Service Worker] Non-fatal caching notice during install:', err);
-      });
+      console.log('[Service Worker] Pre-caching offline application shell and all resilient icons');
+      return Promise.allSettled(
+        STATIC_ASSETS.map((asset) =>
+          cache.add(asset).catch((err) => {
+            console.warn('[Service Worker] Non-fatal asset precache notice:', asset, err);
+          })
+        )
+      );
     }).then(() => self.skipWaiting())
   );
 });
@@ -34,7 +43,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((keys) => {
       return Promise.all(
         keys.filter((key) => key !== CACHE_NAME).map((key) => {
-          console.log('[Service Worker] Removing outdated cache:', key);
+          console.log('[Service Worker] Purging legacy cache:', key);
           return caches.delete(key);
         })
       );
@@ -43,7 +52,6 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
@@ -52,17 +60,57 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(event.request).catch(async () => {
-        // Return offline JSON response when network fails
         return new Response(
           JSON.stringify({
             offline: true,
-            message: 'Network offline. Using client-side local database as source of truth.'
+            message: 'Network offline. Using client-side Dexie IndexedDB as source of truth.'
           }),
           {
             headers: { 'Content-Type': 'application/json' },
             status: 503
           }
         );
+      })
+    );
+    return;
+  }
+
+  // Resilient Icon & Manifest Cache-First Strategy
+  const isIconOrManifest = 
+    url.pathname.endsWith('.png') ||
+    url.pathname.endsWith('.ico') ||
+    url.pathname.endsWith('.svg') ||
+    url.pathname.endsWith('.webmanifest') ||
+    url.pathname.includes('manifest.json') ||
+    url.pathname.includes('/icons/');
+
+  if (isIconOrManifest) {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        return fetch(event.request)
+          .then((networkResponse) => {
+            if (networkResponse && networkResponse.status === 200) {
+              const responseToCache = networkResponse.clone();
+              caches.open(CACHE_NAME).then((cache) => {
+                cache.put(event.request, responseToCache);
+              });
+            }
+            return networkResponse;
+          })
+          .catch(async () => {
+            // High-resilient fallback: If any icon request fails, serve primary 192 or 512 icon from cache
+            if (url.pathname.includes('512') || url.pathname.includes('maskable')) {
+              return (await caches.match('/web-app-manifest-512x512.png')) ||
+                     (await caches.match('/icons/icon-512x512.png'));
+            }
+            return (await caches.match('/web-app-manifest-192x192.png')) ||
+                   (await caches.match('/favicon-96x96.png')) ||
+                   (await caches.match('/apple-touch-icon.png'));
+          });
       })
     );
     return;
@@ -82,7 +130,6 @@ self.addEventListener('fetch', (event) => {
           return networkResponse;
         })
         .catch(() => {
-          // If offline and request is for page navigation, fallback to root/index.html
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html') || caches.match('/');
           }

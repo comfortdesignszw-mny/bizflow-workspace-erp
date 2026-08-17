@@ -42,10 +42,16 @@ export const PWAInstallBanner: React.FC = () => {
       <div className="p-4 rounded-2xl bg-neutral-900/95 border border-blue-500/40 shadow-2xl shadow-black/80 backdrop-blur-md flex items-start gap-3 text-neutral-100">
         <div className="w-12 h-12 rounded-xl overflow-hidden shadow-md shadow-blue-500/20 border border-blue-400/30 shrink-0 bg-neutral-950 p-0.5 flex items-center justify-center">
           <img
-            src="/icons/icon-192x192.png"
+            src="/web-app-manifest-192x192.png"
             alt="BizFlow ERP App Logo"
             className="w-full h-full object-cover rounded-lg"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              if (!target.src.includes('favicon-96x96')) {
+                target.src = '/favicon-96x96.png';
+              }
+            }}
           />
         </div>
 

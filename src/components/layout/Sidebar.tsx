@@ -189,11 +189,14 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
             >
               <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-neutral-900 border border-neutral-700/80 p-0.5 overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-blue-950/40 group-hover:border-blue-500/50 transition-colors">
                 <img
-                  src="/icons/icon-192x192.png"
+                  src="/web-app-manifest-192x192.png"
                   alt="BizFlow ERP Logo"
                   className="w-full h-full object-cover rounded-lg"
                   onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.includes('favicon-96x96')) {
+                      target.src = '/favicon-96x96.png';
+                    }
                   }}
                 />
               </div>

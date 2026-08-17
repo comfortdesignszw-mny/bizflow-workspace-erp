@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
@@ -527,8 +528,79 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     });
   });
 
-  // Explicitly serve public assets with CORS and PWA headers
+  // Web Manifest & PWA Icon Resilient Serving Engine (guarantees 0% 404s for any PWA / audit request)
   const publicDir = path.join(process.cwd(), 'public');
+  const manifestPath = path.join(publicDir, 'manifest.json');
+  const fallback192 = path.join(publicDir, 'web-app-manifest-192x192.png');
+  const fallback512 = path.join(publicDir, 'web-app-manifest-512x512.png');
+  const fallbackFavicon = path.join(publicDir, 'favicon-96x96.png');
+
+  // Serve manifests with compliant headers
+  app.get(['/manifest.json', '/manifest.webmanifest', '/site.webmanifest'], (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    if (fs.existsSync(manifestPath)) {
+      return res.sendFile(manifestPath);
+    }
+    return res.json({
+      name: "BizFlow Enterprise ERP",
+      short_name: "BizFlow ERP",
+      icons: [
+        { src: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ],
+      theme_color: "#06071b",
+      background_color: "#06071b",
+      display: "standalone"
+    });
+  });
+
+  // Resilient handler for all icons, favicons, touch icons, and maskables
+  const handleIconRequest = (req: express.Request, res: express.Response) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+
+    const cleanPath = req.path.replace(/^\//, '');
+    const requestedFile = path.join(publicDir, cleanPath);
+
+    if (fs.existsSync(requestedFile)) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.sendFile(requestedFile);
+    }
+
+    // Dynamic resolution based on request naming
+    if (cleanPath.includes('512') || cleanPath.includes('large') || cleanPath.includes('splash')) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.sendFile(fallback512);
+    }
+
+    if (cleanPath.includes('favicon') || cleanPath.includes('16') || cleanPath.includes('32') || cleanPath.includes('96')) {
+      res.setHeader('Content-Type', 'image/png');
+      return res.sendFile(fallbackFavicon);
+    }
+
+    res.setHeader('Content-Type', 'image/png');
+    return res.sendFile(fallback192);
+  };
+
+  // Register dedicated routes for all standard PWA & Browser icon locations
+  app.get([
+    '/favicon.ico',
+    '/favicon.png',
+    '/favicon-96x96.png',
+    '/favicon-32x32.png',
+    '/favicon-16x16.png',
+    '/apple-touch-icon.png',
+    '/apple-touch-icon-180x180.png',
+    '/apple-touch-icon-precomposed.png',
+    '/web-app-manifest-192x192.png',
+    '/web-app-manifest-512x512.png',
+    '/icon.png',
+    '/icons/:iconName'
+  ], handleIconRequest);
+
+  // Explicitly serve public assets with CORS and PWA headers
   app.use(express.static(publicDir, {
     setHeaders: (res, filePath) => {
       res.setHeader('Access-Control-Allow-Origin', '*');

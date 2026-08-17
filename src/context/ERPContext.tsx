@@ -394,8 +394,15 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const checkStandalone = () => {
         setIsStandaloneMode(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
       };
+      checkStandalone();
       const mediaQuery = window.matchMedia('(display-mode: standalone)');
       mediaQuery.addEventListener('change', checkStandalone);
+
+      // Check if beforeinstallprompt was already captured prior to React mount
+      if ((window as any).__deferredPWAInstallPrompt) {
+        setDeferredPrompt((window as any).__deferredPWAInstallPrompt);
+        setIsInstallPromptAvailable(true);
+      }
     }
 
     const handleOnline = () => {
@@ -425,16 +432,29 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     };
 
+    const handleAppInstalled = () => {
+      console.log('[PWA] BizFlow ERP has been successfully installed natively');
+      setIsStandaloneMode(true);
+      setIsInstallPromptAvailable(false);
+      setIsPWAInstallModalOpen(false);
+      setDeferredPrompt(null);
+      if (typeof window !== 'undefined') {
+        (window as any).__deferredPWAInstallPrompt = null;
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('pwa-install-ready', handlePwaInstallReady);
+    window.addEventListener('appinstalled', handleAppInstalled);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('pwa-install-ready', handlePwaInstallReady);
+      window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
