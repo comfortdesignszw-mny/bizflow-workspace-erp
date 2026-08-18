@@ -533,8 +533,8 @@ export const ITDepartmentModule: React.FC = () => {
               icon={Server}
               title="No Monitored Servers or Cloud Services"
               description="Register infrastructure endpoints, load balancers, database clusters, and cloud microservices for real-time uptime health monitoring."
-              actionText="Poll System Status"
-              onAction={handleDiagnosticPing}
+              actionLabel="Poll System Status"
+              onAction={handleRunSystemPingTest}
             />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -662,7 +662,9 @@ export const ITDepartmentModule: React.FC = () => {
                           <div className="flex items-center gap-1.5">
                             <span className="font-mono text-xs font-bold text-white">{dev.assetTag}</span>
                             {dev.encryptionEnabled && (
-                              <Lock className="w-3 h-3 text-emerald-400" title="Disk Encryption Enabled" />
+                              <span title="Disk Encryption Enabled">
+                                <Lock className="w-3 h-3 text-emerald-400" />
+                              </span>
                             )}
                           </div>
                           <span className="text-[10px] text-neutral-400">{dev.brand} {dev.model}</span>

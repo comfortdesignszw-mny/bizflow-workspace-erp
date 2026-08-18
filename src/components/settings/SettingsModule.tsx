@@ -32,6 +32,7 @@ export const SettingsModule: React.FC = () => {
     setTheme,
     auditLogs,
     resetAllDataToDefault,
+    cleanProductionDatabase,
     currentUser,
     isOnline,
     syncStatus,
@@ -379,18 +380,29 @@ export const SettingsModule: React.FC = () => {
 
       {/* Governance & Audit Log Stream */}
       <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-white">System Governance & Audit Trail</h3>
             <p className="text-xs text-neutral-400">Append-only chronological log of all administrative actions and security events.</p>
           </div>
-          <button
-            onClick={resetAllDataToDefault}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-950/60 hover:bg-red-900/80 text-red-300 text-xs font-medium border border-red-800/80 transition-colors cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Reset Demo DB</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={cleanProductionDatabase}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 text-xs font-semibold border border-red-500/40 transition-colors cursor-pointer"
+              title="Purge all sample data and initialize clean database for production"
+            >
+              <Database className="w-3.5 h-3.5" />
+              <span>Clean DB (Production)</span>
+            </button>
+            <button
+              onClick={resetAllDataToDefault}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-300 text-xs font-medium border border-neutral-700 transition-colors cursor-pointer"
+              title="Reload sample demonstration records"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Seed Demo DB</span>
+            </button>
+          </div>
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-neutral-800 text-xs">

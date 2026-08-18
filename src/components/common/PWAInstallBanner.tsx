@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
-import { Download, X, Sparkles, Smartphone, Monitor } from 'lucide-react';
+import { Download, X, Smartphone, Monitor } from 'lucide-react';
 
 export const PWAInstallBanner: React.FC = () => {
   const { installPWA, isStandaloneMode, setIsPWAInstallModalOpen } = useERP();
@@ -11,8 +11,12 @@ export const PWAInstallBanner: React.FC = () => {
     if (isStandaloneMode) return;
 
     // Check if dismissed in this session
-    const dismissed = sessionStorage.getItem('bizflow_pwa_banner_dismissed');
-    if (dismissed) return;
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        const dismissed = sessionStorage.getItem('bizflow_pwa_banner_dismissed');
+        if (dismissed) return;
+      }
+    } catch {}
 
     // Gently show after 3 seconds of usage
     const timer = setTimeout(() => {
@@ -24,7 +28,11 @@ export const PWAInstallBanner: React.FC = () => {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    sessionStorage.setItem('bizflow_pwa_banner_dismissed', 'true');
+    try {
+      if (typeof sessionStorage !== 'undefined') {
+        sessionStorage.setItem('bizflow_pwa_banner_dismissed', 'true');
+      }
+    } catch {}
   };
 
   const handleInstallClick = () => {
@@ -58,7 +66,7 @@ export const PWAInstallBanner: React.FC = () => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-400 border border-blue-500/30">
-              <Sparkles className="w-2.5 h-2.5" />
+              <Smartphone className="w-2.5 h-2.5" />
               Native App
             </span>
           </div>
@@ -100,3 +108,4 @@ export const PWAInstallBanner: React.FC = () => {
     </aside>
   );
 };
+

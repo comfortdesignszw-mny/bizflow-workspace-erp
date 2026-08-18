@@ -195,7 +195,7 @@ export const TasksModule: React.FC = () => {
           >
             <option value="ALL">All Projects</option>
             {projects.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+              <option key={p.id} value={p.id}>{p.title || p.name}</option>
             ))}
           </select>
 
@@ -325,7 +325,7 @@ export const TasksModule: React.FC = () => {
                   className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
                 >
                   {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.department})</option>
+                    <option key={p.id} value={p.id}>{p.title || p.name} ({p.department})</option>
                   ))}
                 </select>
               </div>
@@ -338,7 +338,7 @@ export const TasksModule: React.FC = () => {
                   className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
                 >
                   {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.designation})</option>
+                    <option key={emp.id} value={emp.id}>{emp.firstName} {emp.lastName} ({emp.position})</option>
                   ))}
                 </select>
               </div>

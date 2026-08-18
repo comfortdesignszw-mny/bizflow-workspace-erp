@@ -17,8 +17,10 @@ import {
   ProjectStage,
   Task,
   Asset,
+  AssetCategory,
   ExpenseClaim,
   Invoice,
+  InvoiceItem,
   AuditLog,
   CompanySettings,
   ScanType,
@@ -77,7 +79,8 @@ import {
   setLocalSandbox,
   loadCollectionOfflineFirst,
   persistCollectionToStorage,
-  performFullSync
+  performFullSync,
+  cleanDatabaseStorage
 } from '../db/offlineSyncService';
 
 interface ERPContextType {
@@ -88,6 +91,7 @@ interface ERPContextType {
   triggerManualSync: () => Promise<void>;
   isInstallPromptAvailable: boolean;
   installPWA: () => Promise<void>;
+  cleanProductionDatabase: () => Promise<{ success: boolean }>;
   offlineStorageEngine: string;
 
   // Current logged in persona & RBAC
@@ -189,19 +193,19 @@ interface ERPContextType {
   updateProject: (id: string, updates: Partial<Project>) => void;
   updateProjectStage: (id: string, stage: ProjectStatus) => void;
   deleteProject: (id: string) => void;
-  addTask: (task: Omit<Task, 'id' | 'createdDate' | 'loggedHours'>) => Task;
+  addTask: (task: (Omit<Task, 'id' | 'createdDate' | 'loggedHours'> | (Partial<Task> & { title: string; projectId: string }))) => Task;
   updateTaskStatus: (id: string, status: Task['status']) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
 
   // Actions: Assets & Inventory
-  addAsset: (asset: Omit<Asset, 'id' | 'code'>) => Asset;
+  addAsset: (asset: Omit<Asset, 'id' | 'code'> | (Partial<Asset> & { name: string; category: AssetCategory; serialNumber: string; purchaseDate: string; location: string })) => Asset;
   updateAsset: (id: string, updates: Partial<Asset>) => void;
   assignAsset: (assetId: string, employeeId?: string) => void;
 
   // Actions: Expenses & Invoicing
   addExpense: (expense: Omit<ExpenseClaim, 'id' | 'code' | 'submittedDate' | 'status'>) => ExpenseClaim;
   updateExpenseStatus: (id: string, status: ExpenseClaim['status']) => void;
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'>) => Invoice;
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber'> | (Omit<Invoice, 'id' | 'invoiceNumber' | 'items'> & { items: (InvoiceItem | Omit<InvoiceItem, 'id'>)[] })) => Invoice;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => void;
 
   // Actions: Procurement & Fleet
@@ -379,9 +383,11 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [isPWAInstallModalOpen, setIsPWAInstallModalOpen] = useState(false);
   const [isStandaloneMode, setIsStandaloneMode] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
-    }
+    try {
+      if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true;
+      }
+    } catch {}
     return false;
   });
   const [selectedEmployeeForBadge, setSelectedEmployeeForBadge] = useState<Employee | null>(null);
@@ -390,13 +396,29 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // 1. Online / Offline listeners & PWA install prompt handler
   useEffect(() => {
+    let mediaQuery: MediaQueryList | null = null;
+    let checkStandalone: (() => void) | null = null;
+
     if (typeof window !== 'undefined') {
-      const checkStandalone = () => {
-        setIsStandaloneMode(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+      checkStandalone = () => {
+        try {
+          if (window.matchMedia) {
+            setIsStandaloneMode(window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true);
+          }
+        } catch {}
       };
       checkStandalone();
-      const mediaQuery = window.matchMedia('(display-mode: standalone)');
-      mediaQuery.addEventListener('change', checkStandalone);
+
+      try {
+        if (window.matchMedia) {
+          mediaQuery = window.matchMedia('(display-mode: standalone)');
+          if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', checkStandalone);
+          } else if ((mediaQuery as any).addListener) {
+            (mediaQuery as any).addListener(checkStandalone);
+          }
+        }
+      } catch {}
 
       // Check if beforeinstallprompt was already captured prior to React mount
       if ((window as any).__deferredPWAInstallPrompt) {
@@ -455,6 +477,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('pwa-install-ready', handlePwaInstallReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
+      if (mediaQuery && checkStandalone) {
+        if (mediaQuery.removeEventListener) {
+          mediaQuery.removeEventListener('change', checkStandalone);
+        } else if ((mediaQuery as any).removeListener) {
+          (mediaQuery as any).removeListener(checkStandalone);
+        }
+      }
     };
   }, []);
 
@@ -819,7 +848,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }) => {
     const emp = employees.find(e => e.id === params.employeeId || e.code === params.employeeId);
     if (!emp) {
-      return { success: false, message: `Employee record not found for "${params.employeeId}".`, scanType: 'IN' };
+      return { success: false, message: `Employee record not found for "${params.employeeId}".`, scanType: (params.scanType || 'IN') as ScanType };
     }
 
     // Determine IN vs OUT automatically if not explicitly given
@@ -889,22 +918,47 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const code = empData.code && empData.code.trim().length > 0 ? empData.code.trim() : getNextEmployeeCode();
     const newEmp: Employee = {
       ...empData,
-      id: `emp-${Date.now()}`,
+      id: `emp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       code,
     };
 
     setEmployees(prev => [newEmp, ...prev]);
+
+    // Multi-tier persistence: IndexedDB
+    db.employees.put(newEmp).catch(e => console.warn('Dexie put employee error:', e));
+
+    // Stateless remote REST sync
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch('/api/employees', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEmp)
+      }).catch(err => console.warn('Stateless REST sync error:', err));
+    }
+
     logAudit('EMPLOYEE_CREATED', 'Employee Directory', `Added new employee ${newEmp.firstName} ${newEmp.lastName} (${code}).`);
     return newEmp;
   }, [getNextEmployeeCode, logAudit]);
 
   const updateEmployee = useCallback((id: string, updates: Partial<Employee>) => {
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
+    db.employees.update(id, updates).catch(e => console.warn('Dexie update employee error:', e));
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch(`/api/employees/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      }).catch(() => {});
+    }
     logAudit('EMPLOYEE_UPDATED', 'Employee Directory', `Updated employee profile #${id}.`);
   }, [logAudit]);
 
   const deleteEmployee = useCallback((id: string) => {
     setEmployees(prev => prev.filter(e => e.id !== id));
+    db.employees.delete(id).catch(e => console.warn('Dexie delete error:', e));
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch(`/api/employees/${id}`, { method: 'DELETE' }).catch(() => {});
+    }
     logAudit('EMPLOYEE_TERMINATED', 'Employee Directory', `Removed employee record #${id}.`, 'WARNING');
   }, [logAudit]);
 
@@ -1053,7 +1107,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       employeeName: emp ? `${emp.firstName} ${emp.lastName}` : 'Employee Record',
       department: emp ? emp.department : 'Operations',
       position: emp ? emp.position : 'Staff Specialist',
-      bankDetails: emp ? emp.bankDetails : { bankName: 'Standard Chartered', accountNumber: '9988776655', routingNumber: '021000021' },
+      bankDetails: emp ? emp.bankDetails : { accountName: 'Enterprise Employee', bankName: 'Standard Chartered', accountNumber: '9988776655', routingNumber: '021000021' },
       baseSalary,
       workingDays,
       presentDays,
@@ -1293,6 +1347,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const job = jobOpenings.find(j => j.id === app.jobOpeningId);
 
     const newEmp = addEmployee({
+      code: getNextEmployeeCode(),
       firstName,
       lastName,
       email: app.email,
@@ -1451,20 +1506,35 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('PROJECT_DELETED', 'Project Management', `Deleted project #${id} and associated tasks.`, 'WARNING');
   }, [logAudit]);
 
-  const addTask = useCallback((task: Omit<Task, 'id' | 'createdDate' | 'loggedHours'>): Task => {
+  const addTask = useCallback((task: (Omit<Task, 'id' | 'createdDate' | 'loggedHours'> | (Partial<Task> & { title: string; projectId: string }))): Task => {
+    const parentProj = projects.find(p => p.id === task.projectId);
+    const assignee = employees.find(e => e.id === task.assignedToId || e.id === (task as any).assigneeId);
+    
     const newTask: Task = {
-      ...task,
       id: `tsk-${Date.now()}`,
+      projectId: task.projectId,
+      projectCode: task.projectCode || parentProj?.code || 'PRJ-ENG-01',
+      projectTitle: task.projectTitle || parentProj?.title || (task as any).projectName || 'Enterprise System',
+      title: task.title,
+      description: task.description || '',
+      assignedToId: task.assignedToId || (task as any).assigneeId || assignee?.id || 'emp-1',
+      assignedToName: task.assignedToName || (task as any).assigneeName || (assignee ? `${assignee.firstName} ${assignee.lastName}` : 'Unassigned'),
+      assignedToAvatar: task.assignedToAvatar || assignee?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+      priority: task.priority || 'Medium',
+      status: task.status || 'Todo',
+      estimatedHours: task.estimatedHours || 8,
+      loggedHours: 0,
+      dueDate: task.dueDate || new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
       createdDate: new Date().toISOString().split('T')[0],
-      loggedHours: 0
+      tags: task.tags || ['General']
     };
     setTasks(prev => [newTask, ...prev]);
     setProjects(prev => prev.map(p => {
       if (p.id !== task.projectId) return p;
-      return { ...p, tasksCount: p.tasksCount + 1 };
+      return { ...p, tasksCount: (p.tasksCount || 0) + 1 };
     }));
     return newTask;
-  }, []);
+  }, [projects, employees]);
 
   const updateTaskStatus = useCallback((id: string, status: Task['status']) => {
     setTasks(prev => {
@@ -1486,9 +1556,13 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   // Assets
-  const addAsset = useCallback((asset: Omit<Asset, 'id' | 'code'>): Asset => {
+  const addAsset = useCallback((asset: Omit<Asset, 'id' | 'code'> | (Partial<Asset> & { name: string; category: AssetCategory; serialNumber: string; purchaseDate: string; location: string })): Asset => {
     const count = assets.length + 1;
     const newAsset: Asset = {
+      model: asset.model || 'Standard Enterprise Model',
+      condition: asset.condition || 'Good',
+      purchaseValue: asset.purchaseValue ?? (asset as any).purchaseCost ?? 1200,
+      status: asset.status || 'Available',
       ...asset,
       id: `ast-${Date.now()}`,
       code: `AST-${1000 + count}`
@@ -1528,7 +1602,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       status: 'Pending'
     };
     setExpenses(prev => [newExp, ...prev]);
-    logAudit('EXPENSE_SUBMITTED', 'Finance & Expenses', `Submitted expense claim ${newExp.code} for $${newExp.amount}.`);
+    logAudit('EXPENSE_SUBMITTED', 'Finance & Expenses', `Submitted expense claim ${newExp.code} for ${newExp.amount}.`);
     return newExp;
   }, [expenses.length, logAudit]);
 
@@ -1537,15 +1611,24 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('EXPENSE_STATUS_UPDATED', 'Finance & Expenses', `Expense claim #${id} status changed to ${status}.`);
   }, [currentUser.name, logAudit]);
 
-  const addInvoice = useCallback((invoice: Omit<Invoice, 'id' | 'invoiceNumber'>): Invoice => {
+  const addInvoice = useCallback((invoice: Omit<Invoice, 'id' | 'invoiceNumber'> | (Omit<Invoice, 'id' | 'invoiceNumber' | 'items'> & { items: (InvoiceItem | Omit<InvoiceItem, 'id'>)[] })): Invoice => {
     const count = invoices.length + 1;
+    const formattedItems: InvoiceItem[] = (invoice.items || []).map((item, idx) => ({
+      id: (item as any).id || `inv-item-${Date.now()}-${idx}`,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      total: item.total
+    }));
+
     const newInv: Invoice = {
       ...invoice,
+      items: formattedItems,
       id: `inv-${Date.now()}`,
       invoiceNumber: `INV-2026-0${800 + count}`
     };
     setInvoices(prev => [newInv, ...prev]);
-    logAudit('INVOICE_GENERATED', 'Finance & Billing', `Generated invoice ${newInv.invoiceNumber} for ${newInv.clientName} ($${newInv.totalAmount.toLocaleString()}).`);
+    logAudit('INVOICE_GENERATED', 'Finance & Billing', `Generated invoice ${newInv.invoiceNumber} for ${newInv.clientName} (${newInv.totalAmount.toLocaleString()}).`);
     return newInv;
   }, [invoices.length, logAudit]);
 
@@ -1912,6 +1995,56 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('SYSTEM_RESET', 'System Admin', 'System database reset to initial demonstration state.', 'WARNING');
   }, [logAudit]);
 
+  // Clean Production Database: Purges all sample data and retains Admin user Comfort
+  const cleanProductionDatabase = useCallback(async (): Promise<{ success: boolean }> => {
+    setEmployees([]);
+    setAccessLogs([]);
+    setAttendanceRollups([]);
+    setPayrollRuns([]);
+    setJobOpenings([]);
+    setApplicants([]);
+    setProjects([]);
+    setTasks([]);
+    setAssets([]);
+    setExpenses([]);
+    setInvoices([]);
+    setVendors([]);
+    setPurchaseOrders([]);
+    setMicroservices([]);
+    setDeployPipelines([]);
+    setClientAccounts([]);
+    setDeals([]);
+    setNotes([]);
+    setItTickets([]);
+    setItSystems([]);
+    setItDevices([]);
+    setItLicenses([]);
+    setVehicles([]);
+    setDrivers([]);
+    setTripLogs([]);
+    
+    // Set user to Admin (Comfort)
+    setCurrentUser(INITIAL_PERSONAS[0]);
+
+    // Clear Dexie and LocalStorage and trigger remote clean
+    const res = await cleanDatabaseStorage();
+
+    const cleanLog: AuditLog = {
+      id: `aud-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      userId: INITIAL_PERSONAS[0].id,
+      userName: INITIAL_PERSONAS[0].name,
+      role: 'ADMIN',
+      action: 'PRODUCTION_DB_INITIALIZED',
+      module: 'System Admin',
+      details: 'Production database cleaned and initialized. Admin user active with 0 demo records.',
+      status: 'SUCCESS'
+    };
+    setAuditLogs([cleanLog]);
+
+    return { success: res.success };
+  }, []);
+
   const value = {
     isOnline,
     syncStatus,
@@ -1919,6 +2052,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     triggerManualSync,
     isInstallPromptAvailable,
     installPWA,
+    cleanProductionDatabase,
     offlineStorageEngine: 'Dexie.JS IndexedDB (Sandbox-First)',
     currentUser,
     setCurrentUser,

@@ -1567,7 +1567,7 @@ export const FleetManagement: React.FC = () => {
                   <div className="flex gap-2">
                     <select
                       value={vehicleForm.fuelType}
-                      onChange={(e) => setVehicleForm({ ...vehicleForm, fuelType: e.target.value })}
+                      onChange={(e) => setVehicleForm({ ...vehicleForm, fuelType: e.target.value as 'Diesel' | 'Petrol' | 'Hybrid' | 'Electric' })}
                       className="w-1/2 px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-800 text-xs text-white"
                     >
                       <option value="Diesel">Diesel</option>

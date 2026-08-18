@@ -24,13 +24,13 @@ import {
   CheckCircle2,
   ChevronRight,
   MapPin,
-  Sparkles,
   RefreshCw,
   Upload,
   User,
   LayoutGrid,
   Table
 } from 'lucide-react';
+import { EmptyState } from '../common/EmptyState';
 import { Employee, EmployeeStatus, EmploymentType, Gender } from '../../types/erp';
 
 // Curated avatar presets for quick selection
@@ -258,8 +258,22 @@ export const EmployeesModule: React.FC = () => {
         </div>
       </div>
 
-      {/* View Mode: Grid vs Table */}
-      {viewMode === 'grid' ? (
+      {/* View Mode: Grid vs Table vs EmptyState */}
+      {filteredEmployees.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          title="No Employees in Directory"
+          description={
+            searchQuery || selectedDept !== 'ALL' || selectedStatus !== 'ALL'
+              ? 'No employee profiles match your active search and filter criteria.'
+              : 'Your employee directory is clean and ready. Add new staff members with verified credentials and role assignments.'
+          }
+          actionLabel="Enroll First Employee"
+          onAction={() => setIsAddModalOpen(true)}
+          secondaryActionLabel={searchQuery || selectedDept !== 'ALL' || selectedStatus !== 'ALL' ? 'Clear Filters' : undefined}
+          onSecondaryAction={searchQuery || selectedDept !== 'ALL' || selectedStatus !== 'ALL' ? () => { setSearchQuery(''); setSelectedDept('ALL'); setSelectedStatus('ALL'); } : undefined}
+        />
+      ) : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredEmployees.map((emp) => {
             const isInside = currentlyInsideEmployees.some(e => e.id === emp.id);
@@ -627,7 +641,7 @@ export const EmployeesModule: React.FC = () => {
               <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800/80 space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-300 flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                    <Shield className="w-3.5 h-3.5 text-indigo-400" />
                     <span>Employee ID & Profile Picture</span>
                   </h3>
                   <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-full font-medium">

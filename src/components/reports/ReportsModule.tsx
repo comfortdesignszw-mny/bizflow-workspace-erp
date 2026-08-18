@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useERP } from '../../context/ERPContext';
 import {
   FileBarChart2,
-  Sparkles,
+  Cpu,
   Download,
   Printer,
   Calendar,
@@ -183,7 +183,7 @@ export const ReportsModule: React.FC = () => {
             activeReportTab === 'copilot' ? 'border-blue-500 text-blue-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'
           }`}
         >
-          <Sparkles className="w-4 h-4 text-blue-400" />
+          <Cpu className="w-4 h-4 text-blue-400" />
           <span>AI ERP Query Copilot</span>
         </button>
 
@@ -220,7 +220,7 @@ export const ReportsModule: React.FC = () => {
                 >
                   {msg.role === 'assistant' && (
                     <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30">
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <Cpu className="w-3.5 h-3.5" />
                     </div>
                   )}
                   <div
@@ -238,7 +238,7 @@ export const ReportsModule: React.FC = () => {
               {isCopilotLoading && (
                 <div className="flex gap-3 text-xs items-center text-neutral-400 italic">
                   <div className="w-7 h-7 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/30">
-                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    <Cpu className="w-3.5 h-3.5 animate-spin" />
                   </div>
                   <span>Analyzing ERP telemetry with Gemini API...</span>
                 </div>

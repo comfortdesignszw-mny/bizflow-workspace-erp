@@ -32,10 +32,10 @@ import {
 export const INITIAL_PERSONAS: UserPersona[] = [
   {
     id: 'user-admin',
-    name: 'Eleanor Vance',
-    email: 'eleanor.vance@comfortbizflow.io',
+    name: 'Comfort (System Admin)',
+    email: 'comfort.designszw@gmail.com',
     role: 'ADMIN',
-    roleTitle: 'Chief Executive & System Admin',
+    roleTitle: 'Chief Executive & System Administrator',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     department: 'Executive Board',
     employeeId: 'emp-001'

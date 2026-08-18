@@ -81,10 +81,13 @@ export async function loadCollectionOfflineFirst<T extends { id: string }>(
     // Step 3: If not in local storage and online, query online database
     if (typeof navigator !== 'undefined' && navigator.onLine) {
       try {
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+        const timer = controller ? setTimeout(() => controller.abort(), 2500) : null;
         const response = await fetch(`/api/db/${collectionName}`, {
           headers: { 'Accept': 'application/json' },
-          signal: AbortSignal.timeout(3000)
+          signal: controller ? controller.signal : undefined
         });
+        if (timer) clearTimeout(timer);
         if (response.ok) {
           const result = await response.json();
           if (Array.isArray(result.data) && result.data.length > 0) {
@@ -222,3 +225,57 @@ export async function performFullSync(): Promise<{ success: boolean; syncedCount
     return { success: false, syncedCount: 0, timestamp: new Date().toISOString() };
   }
 }
+
+/**
+ * Completely purges and resets the database across IndexedDB, LocalStorage, and Stateless Server datastore
+ */
+export async function cleanDatabaseStorage(): Promise<{ success: boolean; message: string }> {
+  try {
+    // 1. Clear all Dexie IndexedDB tables
+    const tables = [
+      db.employees, db.accessLogs, db.attendanceRollups, db.payrollRuns,
+      db.jobOpenings, db.applicants, db.projects, db.tasks,
+      db.assets, db.expenses, db.invoices, db.auditLogs,
+      db.vendors, db.purchaseOrders, db.microservices, db.deployPipelines,
+      db.deals, db.clientAccounts, db.notes, db.itTickets,
+      db.itSystems, db.itDevices, db.itLicenses, db.vehicles,
+      db.drivers, db.tripLogs, db.syncMeta
+    ];
+
+    await Promise.all(tables.map(t => t.clear().catch(() => {})));
+
+    // 2. Clear LocalStorage sandbox items
+    if (typeof localStorage !== 'undefined') {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(LOCAL_STORAGE_PREFIX)) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+
+    // 3. Set Admin User
+    const adminPersona = INITIAL_PERSONAS[0];
+    setLocalSandbox('user', adminPersona);
+
+    // 4. Trigger remote API datastore purge if online
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      try {
+        await fetch('/api/db/clean', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.warn('[CleanDB] Remote clean notice:', err);
+      }
+    }
+
+    return { success: true, message: 'Database successfully cleared and production ready.' };
+  } catch (err: any) {
+    console.error('[CleanDB] Error during database purge:', err);
+    return { success: false, message: err?.message || 'Database clean failed' };
+  }
+}
+

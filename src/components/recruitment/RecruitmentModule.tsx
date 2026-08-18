@@ -3,7 +3,7 @@ import { useERP } from '../../context/ERPContext';
 import {
   Briefcase,
   Plus,
-  Sparkles,
+  Cpu,
   Users,
   Search,
   CheckCircle2,
@@ -1187,7 +1187,7 @@ export const RecruitmentModule: React.FC = () => {
               <div className="p-4 rounded-xl bg-gradient-to-r from-neutral-950 via-purple-950/40 to-neutral-950 border border-purple-500/30 space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-purple-400" />
+                    <Cpu className="w-4 h-4 text-purple-400" />
                     <h4 className="font-bold text-white">Gemini AI Resume & Fit Analysis</h4>
                   </div>
                   <button

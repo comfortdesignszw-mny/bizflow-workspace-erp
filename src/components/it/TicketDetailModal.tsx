@@ -8,7 +8,6 @@ import {
   User,
   AlertTriangle,
   Server,
-  Sparkles,
   Shield,
   Laptop,
   MessageSquare,
@@ -212,8 +211,8 @@ export const TicketDetailModal: React.FC<TicketDetailModalProps> = ({ ticket, on
           <div className="p-4 bg-gradient-to-r from-blue-950/40 via-purple-950/20 to-neutral-950 rounded-xl border border-blue-500/30 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-blue-400 text-xs font-bold">
-                <Sparkles className="w-4 h-4" />
-                <span>AI Root Cause Diagnostics Engine</span>
+                <Activity className="w-4 h-4" />
+                <span>Automated Root Cause Diagnostics</span>
               </div>
               <button
                 type="button"

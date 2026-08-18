@@ -11,7 +11,6 @@ import {
   Check,
   Tag,
   Clock,
-  Sparkles,
   Edit3,
   Bookmark
 } from 'lucide-react';
@@ -289,8 +288,8 @@ export const NotesPadModule: React.FC = () => {
                 <span>•</span>
                 <span>{charCount} characters</span>
               </div>
-              <div className="flex items-center gap-1.5 text-amber-400">
-                <Sparkles className="w-3 h-3" />
+              <div className="flex items-center gap-1.5 text-emerald-400">
+                <Check className="w-3 h-3" />
                 <span>Auto-saved to local state</span>
               </div>
             </div>

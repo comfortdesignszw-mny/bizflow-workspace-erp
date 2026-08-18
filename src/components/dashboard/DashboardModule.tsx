@@ -9,7 +9,7 @@ import {
   Package,
   TrendingUp,
   Clock,
-  Sparkles,
+  Cpu,
   ArrowUpRight,
   ShieldCheck,
   Building2,
@@ -512,7 +512,7 @@ export const DashboardModule: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-indigo-500/20 pb-4">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 shadow-inner">
-              <Sparkles className="w-5 h-5 text-indigo-400 animate-pulse" />
+              <Cpu className="w-5 h-5 text-indigo-400" />
             </div>
             <div>
               <div className="flex items-center gap-2">

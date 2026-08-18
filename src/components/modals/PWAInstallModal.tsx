@@ -7,7 +7,6 @@ import {
   Monitor,
   Share,
   PlusSquare,
-  Sparkles,
   Database,
   WifiOff,
   CheckCircle2,
@@ -156,7 +155,7 @@ export const PWAInstallModal: React.FC = () => {
 
             {installSuccessNotice && (
               <div className="p-3 rounded-xl bg-blue-950/50 border border-blue-800 text-xs text-blue-300 flex items-start gap-2.5">
-                <Sparkles className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
                 <p>
                   To install, click the <strong>Install App icon (⊕ or ⬇)</strong> in your browser&apos;s address bar, or follow the device guide below.
                 </p>

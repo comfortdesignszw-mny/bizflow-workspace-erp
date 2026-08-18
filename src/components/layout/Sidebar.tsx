@@ -13,7 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Sparkles,
+  Database,
   Truck,
   Cpu,
   TrendingUp,
@@ -650,7 +650,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
                 </span>
               </div>
             </div>
-            <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+            <Database className="w-3.5 h-3.5 text-blue-400 shrink-0" />
           </div>
         ) : (
           <div className="flex justify-center py-1">

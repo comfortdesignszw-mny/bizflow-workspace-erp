@@ -56,6 +56,18 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
+  // Bypass Vite development server modules & hot reload assets completely
+  if (
+    url.pathname.startsWith('/src/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.startsWith('/node_modules/') ||
+    url.pathname.includes('.vite') ||
+    url.searchParams.has('t') ||
+    url.searchParams.has('v')
+  ) {
+    return;
+  }
+
   // Bypass API routes from cache unless offline
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(

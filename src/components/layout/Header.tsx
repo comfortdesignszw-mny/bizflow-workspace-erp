@@ -8,7 +8,7 @@ import {
   Shield,
   ChevronDown,
   Building2,
-  Sparkles,
+  Database,
   RefreshCw,
   LogOut,
   SlidersHorizontal,
@@ -44,6 +44,7 @@ export const Header: React.FC = () => {
     todayLateCount,
     setIsQRScannerOpen,
     resetAllDataToDefault,
+    cleanProductionDatabase,
     setActiveModule,
     isOnline,
     syncStatus,
@@ -505,15 +506,23 @@ export const Header: React.FC = () => {
                   })}
                 </div>
 
-                <div className="pt-2 mt-1 border-t border-neutral-800 flex items-center justify-between px-2">
+                <div className="pt-2 mt-1 border-t border-neutral-800 flex items-center justify-between px-2 gap-2">
+                  <button
+                    onClick={() => { cleanProductionDatabase(); setIsPersonaMenuOpen(false); }}
+                    className="flex items-center gap-1.5 text-[11px] text-red-400 hover:text-red-300 font-medium transition-colors cursor-pointer"
+                    title="Purge all sample data and initialize clean database for production"
+                  >
+                    <Database className="w-3 h-3" />
+                    Clean DB (Production)
+                  </button>
                   <button
                     onClick={() => { resetAllDataToDefault(); setIsPersonaMenuOpen(false); }}
-                    className="flex items-center gap-1.5 text-[11px] text-amber-400 hover:text-amber-300 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 text-[11px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
+                    title="Reload sample demonstration records"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Reset Demo DB
+                    Seed Demo
                   </button>
-                  <span className="text-[10px] text-neutral-500">v2.4 Production</span>
                 </div>
               </div>
             )}

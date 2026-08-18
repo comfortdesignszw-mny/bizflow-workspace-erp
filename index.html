@@ -48,22 +48,24 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register Service Worker for Offline-First PWA capabilities safely
-      if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
-        window.addEventListener('load', () => {
-          try {
-            navigator.serviceWorker.register('/sw.js')
-              .then(registration => {
-                // Service worker active
-              })
-              .catch(() => {
-                // Silently swallow in restricted iframe contexts
-              });
-          } catch (e) {
-            // Silently handled
+      // Manage Service Worker safely: clear in iframe preview to prevent stale caches; register in standalone/top-level
+      try {
+        if ('serviceWorker' in navigator) {
+          const isIframe = window.self !== window.top;
+          if (isIframe) {
+            // Inside preview iframe: unregister service workers to avoid stale Vite cache interference
+            navigator.serviceWorker.getRegistrations().then((registrations) => {
+              registrations.forEach((reg) => reg.unregister());
+            }).catch(() => {});
+          } else if (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            window.addEventListener('load', () => {
+              try {
+                navigator.serviceWorker.register('/sw.js').catch(() => {});
+              } catch (e) {}
+            });
           }
-        });
-      }
+        }
+      } catch (err) {}
     </script>
   </body>
 </html>

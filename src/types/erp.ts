@@ -57,7 +57,7 @@ export interface Employee {
 }
 
 export type ScanType = 'IN' | 'OUT';
-export type ScanMethod = 'QR_SCAN' | 'BADGE_TAP' | 'MANUAL_OVERRIDE' | 'FACIAL_ID';
+export type ScanMethod = 'QR_SCAN' | 'BADGE_TAP' | 'MANUAL_OVERRIDE' | 'FACIAL_ID' | 'TERMINAL_PIN' | 'RFID' | string;
 
 export interface AccessLog {
   id: string;
@@ -147,6 +147,7 @@ export interface PayrollRun {
   code: string; // e.g. PAY-2026-08
   title: string;
   periodMonth: string; // "August 2026"
+  month?: string; // alias
   periodStart: string;
   periodEnd: string;
   status: PayrollStatus;
@@ -224,7 +225,7 @@ export interface Applicant {
 export type ProjectStatus = 'Planning' | 'In Progress' | 'Paused' | 'Finished';
 export type ProjectStage = ProjectStatus;
 export type ProjectPriority = 'Low' | 'Medium' | 'High' | 'Critical' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
-export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type TaskStatus = 'Backlog' | 'Todo' | 'InProgress' | 'In Progress' | 'Review' | 'Done';
 
 export interface ProjectMilestone {
@@ -239,11 +240,13 @@ export interface Task {
   projectId: string;
   projectCode: string;
   projectTitle: string;
+  projectName?: string; // alias
   title: string;
   description: string;
   assignedToId: string;
   assignedToName: string;
   assignedToAvatar: string;
+  assigneeName?: string; // alias
   priority: TaskPriority;
   status: TaskStatus;
   estimatedHours: number;
@@ -257,6 +260,7 @@ export interface Project {
   id: string;
   code: string; // e.g. PRJ-ENG-01
   title: string;
+  name?: string; // alias
   client: string;
   department: string; // Linked Department
   description: string; // Project Description
@@ -277,7 +281,7 @@ export interface Project {
   tasksCount: number;
   completedTasksCount: number;
   milestones?: ProjectMilestone[];
-  priority?: 'Low' | 'Medium' | 'High' | 'Critical';
+  priority?: ProjectPriority;
 }
 
 export type AssetCategory = 'Hardware' | 'Vehicle' | 'Keycard' | 'Office Equipment' | 'Software License';
@@ -289,11 +293,12 @@ export interface Asset {
   code: string; // e.g. AST-1002
   name: string;
   category: AssetCategory;
-  model: string;
+  model?: string;
   serialNumber: string;
   status: AssetStatus;
-  condition: AssetCondition;
-  purchaseValue: number;
+  condition?: AssetCondition;
+  purchaseValue?: number;
+  purchaseCost?: number;
   purchaseDate: string;
   assignedToId?: string;
   assignedToName?: string;
@@ -316,6 +321,7 @@ export interface ExpenseClaim {
   amount: number;
   currency: string;
   description: string;
+  merchant?: string; // alias
   receiptUrl?: string;
   status: ExpenseStatus;
   submittedDate: string;
@@ -324,7 +330,7 @@ export interface ExpenseClaim {
 }
 
 export interface InvoiceItem {
-  id: string;
+  id?: string;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -617,7 +623,8 @@ export interface ITTicket {
   priority: ITTicketPriority;
   status: ITTicketStatus;
   requesterName: string;
-  requesterDepartment: string;
+  requesterDepartment?: string;
+  department?: string; // alias
   requesterEmail: string;
   assignedEngineer?: string;
   assignedToEngineer?: string;
@@ -630,16 +637,18 @@ export interface ITTicket {
   slaDeadline?: string;
   slaTargetHours?: number;
   ipAddress?: string;
-  tags: string[];
+  tags?: string[];
 }
 
 export interface ITSystemHealth {
   id: string;
   name: string;
-  category: 'Network' | 'Identity & Auth' | 'Infrastructure' | 'Security' | 'Communication';
+  category: 'Network' | 'Identity & Auth' | 'Infrastructure' | 'Security' | 'Communication' | 'Database' | 'Cloud' | string;
   status: 'Operational' | 'Degraded' | 'Under Maintenance' | 'Critical Incident';
   uptimePercent: number;
   latencyMs: number;
+  hostOrIp?: string;
+  cpuLoadPercent?: number;
   location: string;
   lastPing: string;
   description: string;
@@ -650,29 +659,41 @@ export type ITDeviceHealth = 'Healthy' | 'Update Required' | 'Security Alert' | 
 export interface ITDeviceInventory {
   id: string;
   assetTag: string;
-  deviceName: string;
+  deviceName?: string;
   brand?: string;
   model?: string;
   type: 'MacBook Pro' | 'ThinkPad' | 'Dell Workstation' | 'Firewall Gateway' | 'Cisco Switch' | 'Access Point' | string;
   serialNumber: string;
+  macAddress?: string;
   assignedTo: string;
-  department: string;
+  assignedEmployeeId?: string;
+  department?: string;
   osVersion: string;
   ipAddress: string;
   healthStatus: ITDeviceHealth;
+  encryptionEnabled?: boolean;
   warrantyExpiry: string;
-  lastCheckin: string;
+  lastCheckin?: string;
+  lastMdmCheckIn?: string;
+  purchaseCost?: number;
+  purchaseDate?: string;
 }
 
 export interface ITSoftwareLicense {
   id: string;
   softwareName: string;
   vendor: string;
-  allocatedSeats: number;
-  totalSeats: number;
-  costPerUserMonthly: number;
+  contactPerson?: string;
+  allocatedSeats?: number;
+  seatsAllocated?: number;
+  totalSeats?: number;
+  seatsTotal?: number;
+  costPerUserMonthly?: number;
+  costPerSeatAnnual?: number;
   renewalDate: string;
-  category: 'Productivity' | 'Security' | 'DevOps' | 'Design' | 'Infrastructure';
-  assignedDepartments: string[];
+  autoRenew?: boolean;
+  category: 'Productivity' | 'Security' | 'DevOps' | 'Design' | 'Infrastructure' | 'Developer Tools' | string;
+  assignedDepartments?: string[];
+  licenseKeyMasked?: string;
 }
 
