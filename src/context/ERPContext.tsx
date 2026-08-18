@@ -1353,6 +1353,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       email: app.email,
       phone: app.phone,
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      sex: (app.gender as any) || 'Female',
+      dateOfEngagement: new Date().toISOString().split('T')[0],
       department: job?.department || 'Engineering',
       position: app.jobTitle,
       employmentType: 'Full-time',
@@ -1363,26 +1365,27 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currency: settings.currency,
       shiftStart: '08:30',
       shiftEnd: '17:30',
-      address: 'Seattle, WA',
-      nationalId: `SSN-${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
+      address: '',
+      physicalAddress: '',
+      nationalId: '',
       emergencyContact: {
-        name: 'Contact',
-        relationship: 'Family',
-        phone: app.phone
+        name: '',
+        relationship: '',
+        phone: ''
       },
       bankDetails: {
-        bankName: 'Bank of America',
-        accountNumber: '•••• ' + Math.floor(1000 + Math.random() * 9000),
-        accountName: app.name,
-        routingNumber: '121000358'
+        bankName: '',
+        accountNumber: '',
+        accountName: '',
+        routingNumber: ''
       },
-      notes: `Onboarded directly from ATS Recruitment Pipeline. AI Resume Match: ${app.aiMatchScore || 90}%.`
+      notes: `Hired from ATS Candidate Pipeline (${app.jobTitle}). Address, National ID, and Bank details to be completed manually.`
     });
 
     updateApplicantStage(applicantId, 'HIRED');
     logAudit('APPLICANT_CONVERTED_TO_EMPLOYEE', 'Recruitment ATS', `Hired ${app.name} as ${app.jobTitle} (Employee ID: ${newEmp.code}).`);
     return newEmp;
-  }, [applicants, jobOpenings, addEmployee, settings.currency, updateApplicantStage, logAudit]);
+  }, [applicants, jobOpenings, addEmployee, settings.currency, updateApplicantStage, logAudit, getNextEmployeeCode]);
 
   const scoreApplicantWithAI = useCallback(async (applicantId: string): Promise<boolean> => {
     const app = applicants.find(a => a.id === applicantId);
@@ -1438,34 +1441,41 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [applicants, jobOpenings, logAudit]);
 
   // Projects & Tasks
-  const addProject = useCallback((proj: Partial<Project> & { title: string; department: string; description: string; startDate: string; endDate: string; budget: number; budgetReceived?: number; status?: ProjectStatus }): Project => {
+  const addProject = useCallback((proj: Partial<Project> & { title: string; description: string; startDate: string; endDate: string; budget: number }): Project => {
     const count = projects.length + 1;
     // Generate departmental code prefix if available
-    const deptPrefix = proj.department ? proj.department.split(/[\s&]+/)[0].toUpperCase().slice(0, 3) : 'PRJ';
+    const deptPrefix = proj.department ? proj.department.split(/[\s&]+/)[0].toUpperCase().slice(0, 3) : (proj.projectType === 'Client' ? 'CLI' : 'PRJ');
     const code = proj.code || `PRJ-${deptPrefix}-0${count}`;
     const budgetAllocated = proj.budgetAllocated ?? proj.budget;
-    const budgetReceived = proj.budgetReceived ?? 0;
-    const dueDate = proj.dueDate || proj.endDate;
+    const budgetReceived = proj.budgetReceived ?? proj.amountDisbursed ?? 0;
+    const dueDate = proj.dueDate || proj.endDate || proj.expectedFinishDate;
 
     const newProj: Project = {
       id: `proj-${Date.now()}`,
       code,
-      title: proj.title,
-      department: proj.department,
-      description: proj.description,
+      title: proj.title || proj.name || 'Untitled Project',
+      name: proj.name || proj.title,
+      projectType: proj.projectType || 'Inhouse',
+      department: proj.department || (proj.projectType === 'Client' ? 'Client Services' : 'Engineering'),
+      description: proj.description || proj.details || '',
+      details: proj.details || proj.description || '',
       status: proj.status || 'Planning',
-      client: proj.client || `${proj.department} Operations`,
+      client: proj.client || (proj.projectType === 'Client' ? 'External Enterprise Client' : 'In-House Operations'),
       leadId: proj.leadId,
-      leadName: proj.leadName || 'Unassigned Lead',
+      leadName: proj.leadName || proj.leadAssigneeName || 'Unassigned Lead',
+      leadAssigneeName: proj.leadAssigneeName || proj.leadName || 'Unassigned Lead',
       leadAvatar: proj.leadAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
       teamMembers: proj.teamMembers || [],
-      budget: proj.budget,
+      budget: proj.budget ?? proj.amountRequired ?? 0,
+      amountRequired: proj.amountRequired ?? proj.budget ?? 0,
       budgetAllocated,
       budgetReceived,
+      amountDisbursed: budgetReceived,
       spent: proj.spent || 0,
       currency: proj.currency || settings.currency,
       startDate: proj.startDate,
-      endDate: proj.endDate,
+      endDate: proj.endDate || proj.expectedFinishDate || proj.startDate,
+      expectedFinishDate: proj.expectedFinishDate || proj.endDate || proj.startDate,
       dueDate,
       progressPercent: proj.progressPercent || (proj.status === 'Finished' ? 100 : 0),
       tasksCount: proj.tasksCount || 0,
@@ -1474,7 +1484,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       milestones: proj.milestones || []
     };
     setProjects(prev => [newProj, ...prev]);
-    logAudit('PROJECT_CREATED', 'Project Management', `Created project ${newProj.title} (${newProj.code}) in ${newProj.department} department.`);
+    logAudit('PROJECT_CREATED', 'Project Management', `Created project ${newProj.title} (${newProj.code}) [${newProj.projectType || 'Inhouse'}].`);
     return newProj;
   }, [projects.length, settings.currency, logAudit]);
 

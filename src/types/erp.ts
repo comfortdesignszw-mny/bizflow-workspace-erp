@@ -222,8 +222,9 @@ export interface Applicant {
   coverLetter?: string;
 }
 
-export type ProjectStatus = 'Planning' | 'In Progress' | 'Paused' | 'Finished';
+export type ProjectStatus = 'Planning' | 'Started' | 'Ongoing' | 'In Progress' | 'Paused' | 'Finished';
 export type ProjectStage = ProjectStatus;
+export type ProjectType = 'Client' | 'Inhouse';
 export type ProjectPriority = 'Low' | 'Medium' | 'High' | 'Critical' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type TaskPriority = 'Low' | 'Medium' | 'High' | 'Critical' | 'Urgent' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export type TaskStatus = 'Backlog' | 'Todo' | 'InProgress' | 'In Progress' | 'Review' | 'Done';
@@ -261,27 +262,33 @@ export interface Project {
   code: string; // e.g. PRJ-ENG-01
   title: string;
   name?: string; // alias
-  client: string;
-  department: string; // Linked Department
+  client?: string;
+  projectType?: ProjectType; // 'Client' | 'Inhouse'
+  department?: string; // Linked Department
   description: string; // Project Description
-  status: ProjectStatus; // Planning | In Progress | Paused | Finished
-  leadId: string;
-  leadName: string;
-  leadAvatar: string;
-  teamMembers: { id: string; name: string; avatar: string; role: string }[];
-  budget: number; // Budget Allocation
+  details?: string; // alias for description
+  status: ProjectStatus; // Planning | Started | Ongoing | Paused | Finished
+  leadId?: string;
+  leadName?: string;
+  leadAssigneeName?: string; // alias
+  leadAvatar?: string;
+  teamMembers?: { id: string; name: string; avatar: string; role: string }[];
+  budget: number; // Project Amount Required
+  amountRequired?: number; // alias
   budgetAllocated?: number;
-  budgetReceived: number; // Budget Received / Disbursed
+  budgetReceived: number; // Amount Disbursed
+  amountDisbursed?: number; // alias
   spent: number; // Actual Expenditure
   currency: string;
   startDate: string; // Project Start Date
-  endDate: string; // Project End Date
+  endDate: string; // Expected Finish Date
+  expectedFinishDate?: string; // alias
   dueDate?: string; // Aliased for legacy tasks
   progressPercent: number;
   tasksCount: number;
   completedTasksCount: number;
   milestones?: ProjectMilestone[];
-  priority?: ProjectPriority;
+  priority?: ProjectPriority; // 'Low' | 'Medium' | 'High'
 }
 
 export type AssetCategory = 'Hardware' | 'Vehicle' | 'Keycard' | 'Office Equipment' | 'Software License';

@@ -498,7 +498,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
               </div>
             )}
 
-            {/* Tasks and Sprints */}
+            {/* Projects and Tasks */}
             <button
               onClick={() => handleNavClick('tasks')}
               className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-xs font-medium transition-all group relative cursor-pointer ${
@@ -506,11 +506,11 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
                   ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25 font-semibold'
                   : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-900'
               }`}
-              title={isCollapsed ? 'Tasks & Sprints' : undefined}
+              title={isCollapsed ? 'Projects and Tasks' : undefined}
               id="nav-tasks"
             >
               <CheckSquare className="w-4 h-4 shrink-0" />
-              {!isCollapsed && <span className="truncate flex-1 text-left">Tasks & Sprints</span>}
+              {!isCollapsed && <span className="truncate flex-1 text-left">Projects and Tasks</span>}
               {!isCollapsed && pendingTasksCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-indigo-500/20 text-indigo-300">
                   {pendingTasksCount}
@@ -518,7 +518,7 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
               )}
               {isCollapsed && (
                 <span className="absolute left-full ml-3 px-2.5 py-1 bg-neutral-900 text-white text-xs rounded-lg shadow-xl border border-neutral-700 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50">
-                  Tasks & Sprints
+                  Projects and Tasks
                 </span>
               )}
             </button>

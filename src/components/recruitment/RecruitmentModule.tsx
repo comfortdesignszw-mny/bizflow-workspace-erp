@@ -90,7 +90,7 @@ export const RecruitmentModule: React.FC = () => {
     employmentType: 'Full-time' as const,
     location: 'Seattle, WA (Hybrid)',
     experienceLevel: 'Senior (5+ yrs)',
-    salaryRange: '$120,000 - $160,000',
+    salaryRange: '$8,500 - $12,000 / month',
     openPositions: 2,
     description: 'We are seeking an experienced specialist to drive core enterprise infrastructure and scalable systems.',
     requirements: '5+ years relevant enterprise domain experience\nStrong systems design and microservices architecture\nProficiency in TypeScript, Node.js, and relational databases',
@@ -99,6 +99,30 @@ export const RecruitmentModule: React.FC = () => {
     applicationDeadline: '2026-10-31',
     status: 'Active' as const
   });
+
+  // Deep linking: Auto-expand job and scroll into view if linked directly
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramJobId = urlParams.get('jobId') || urlParams.get('job');
+    const hash = window.location.hash;
+    let hashJobId = '';
+    if (hash && hash.startsWith('#recruitment-job-')) {
+      hashJobId = hash.replace('#recruitment-job-', '');
+    } else if (hash && hash.startsWith('#job-')) {
+      hashJobId = hash.replace('#job-', '');
+    }
+
+    const targetJobId = paramJobId || hashJobId;
+    if (targetJobId) {
+      setExpandedJobIds(prev => ({ ...prev, [targetJobId]: true }));
+      setTimeout(() => {
+        const el = document.getElementById(`recruitment-job-${targetJobId}`) || document.getElementById(`job-card-${targetJobId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 350);
+    }
+  }, [jobOpenings]);
 
   // Application Form State
   const [applicationForm, setApplicationForm] = useState({
@@ -314,7 +338,7 @@ export const RecruitmentModule: React.FC = () => {
   };
 
   const handleCopyJobLink = (job: JobOpening) => {
-    const link = `${window.location.origin}/#recruitment-job-${job.id}`;
+    const link = `${window.location.origin}${window.location.pathname}?jobId=${job.id}#recruitment-job-${job.id}`;
     navigator.clipboard.writeText(link);
     setCopySuccess(true);
     setTimeout(() => setCopySuccess(false), 2500);
@@ -415,7 +439,8 @@ export const RecruitmentModule: React.FC = () => {
               return (
                 <div
                   key={job.id}
-                  className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm"
+                  id={`recruitment-job-${job.id}`}
+                  className="p-5 rounded-2xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 transition-all flex flex-col justify-between space-y-4 shadow-sm scroll-mt-20"
                 >
                   <div>
                     {/* Top Bar: Department, Type, Status */}
@@ -1308,7 +1333,7 @@ export const RecruitmentModule: React.FC = () => {
                   <input
                     type="text"
                     readOnly
-                    value={`${window.location.origin}/#recruitment-job-${sharingJob.id}`}
+                    value={`${window.location.origin}${window.location.pathname}?jobId=${sharingJob.id}#recruitment-job-${sharingJob.id}`}
                     className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-neutral-300 font-mono text-[11px]"
                   />
                   <button
@@ -1328,7 +1353,7 @@ export const RecruitmentModule: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2.5">
                   {/* LinkedIn */}
                   <a
-                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}/#recruitment-job-${sharingJob.id}`)}`}
+                    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(`${window.location.origin}${window.location.pathname}?jobId=${sharingJob.id}#recruitment-job-${sharingJob.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-3 rounded-xl bg-[#0077b5]/20 border border-[#0077b5]/40 hover:bg-[#0077b5]/30 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -1339,7 +1364,7 @@ export const RecruitmentModule: React.FC = () => {
 
                   {/* Twitter / X */}
                   <a
-                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`We are hiring: ${sharingJob.title} (${sharingJob.salaryRange}) at ${settings.companyName}! Apply here: `)}&url=${encodeURIComponent(`${window.location.origin}/#recruitment-job-${sharingJob.id}`)}`}
+                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`We are hiring: ${sharingJob.title} (${sharingJob.salaryRange}) at ${settings.companyName}! Apply here: `)}&url=${encodeURIComponent(`${window.location.origin}${window.location.pathname}?jobId=${sharingJob.id}#recruitment-job-${sharingJob.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-3 rounded-xl bg-neutral-950 border border-neutral-700 hover:bg-neutral-800 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -1350,7 +1375,7 @@ export const RecruitmentModule: React.FC = () => {
 
                   {/* WhatsApp */}
                   <a
-                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Job Opening: ${sharingJob.title} at ${settings.companyName} (${sharingJob.salaryRange}). Apply now: ${window.location.origin}/#recruitment-job-${sharingJob.id}`)}`}
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Job Opening: ${sharingJob.title} at ${settings.companyName} (${sharingJob.salaryRange}). Apply now: ${window.location.origin}${window.location.pathname}?jobId=${sharingJob.id}#recruitment-job-${sharingJob.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-3 rounded-xl bg-[#25D366]/20 border border-[#25D366]/40 hover:bg-[#25D366]/30 text-emerald-300 font-semibold flex items-center justify-center gap-2 transition-colors"
@@ -1361,7 +1386,7 @@ export const RecruitmentModule: React.FC = () => {
 
                   {/* Email */}
                   <a
-                    href={`mailto:?subject=${encodeURIComponent(`Job Opportunity: ${sharingJob.title} at ${settings.companyName}`)}&body=${encodeURIComponent(`Hello,\n\nWe have opened a requisition for ${sharingJob.title} in ${sharingJob.department} (${sharingJob.salaryRange}).\n\nView details and apply here: ${window.location.origin}/#recruitment-job-${sharingJob.id}`)}`}
+                    href={`mailto:?subject=${encodeURIComponent(`Job Opportunity: ${sharingJob.title} at ${settings.companyName}`)}&body=${encodeURIComponent(`Hello,\n\nWe have opened a requisition for ${sharingJob.title} in ${sharingJob.department} (${sharingJob.salaryRange}).\n\nView details and apply here: ${window.location.origin}${window.location.pathname}?jobId=${sharingJob.id}#recruitment-job-${sharingJob.id}`)}`}
                     className="p-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold flex items-center justify-center gap-2 transition-colors"
                   >
                     <Mail className="w-3.5 h-3.5" />
@@ -1414,6 +1439,7 @@ export const RecruitmentModule: React.FC = () => {
                     onChange={(e) => setNewJobData({ ...newJobData, department: e.target.value })}
                     className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-white"
                   >
+                    <option value="Executive">Executive</option>
                     <option value="Engineering">Engineering</option>
                     <option value="Product & Design">Product & Design</option>
                     <option value="Finance & Accounting">Finance & Accounting</option>
@@ -1436,9 +1462,11 @@ export const RecruitmentModule: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-neutral-400 mb-1">Salary Range</label>
+                  <label className="block text-neutral-400 mb-1">Salary Range (per month) *</label>
                   <input
                     type="text"
+                    required
+                    placeholder="e.g. $8,500 - $12,000 / month"
                     value={newJobData.salaryRange}
                     onChange={(e) => setNewJobData({ ...newJobData, salaryRange: e.target.value })}
                     className="w-full bg-neutral-950 border border-neutral-700 rounded-xl px-3 py-2 text-white font-mono"
@@ -1571,7 +1599,7 @@ export const RecruitmentModule: React.FC = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-neutral-400 mb-1">Salary Range</label>
+                  <label className="block text-neutral-400 mb-1">Salary Range (per month)</label>
                   <input
                     type="text"
                     value={editingJob.salaryRange}

@@ -27,8 +27,24 @@ import { PWAInstallModal } from './components/modals/PWAInstallModal';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
 
 const ERPAppContent: React.FC = () => {
-  const { activeModule } = useERP();
+  const { activeModule, setActiveModule } = useERP();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Handle URL deep links on initial mount or popstate
+  React.useEffect(() => {
+    const handleDeepLinks = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paramJobId = urlParams.get('jobId') || urlParams.get('job');
+      const hash = window.location.hash;
+      if (paramJobId || (hash && hash.includes('recruitment-job-'))) {
+        setActiveModule('recruitment');
+      }
+    };
+
+    handleDeepLinks();
+    window.addEventListener('popstate', handleDeepLinks);
+    return () => window.removeEventListener('popstate', handleDeepLinks);
+  }, [setActiveModule]);
 
   const renderActiveModule = () => {
     switch (activeModule) {
