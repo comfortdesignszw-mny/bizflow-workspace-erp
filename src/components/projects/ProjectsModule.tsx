@@ -44,11 +44,25 @@ const STAGE_CONFIG: Record<ProjectStage, { label: string; color: string; bg: str
     border: 'border-amber-500/30',
     icon: HelpCircle
   },
-  'In Progress': {
-    label: 'In Progress',
+  'Started': {
+    label: 'Started',
+    color: 'text-sky-400',
+    bg: 'bg-sky-500/10',
+    border: 'border-sky-500/30',
+    icon: PlayCircle
+  },
+  'Ongoing': {
+    label: 'Ongoing',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
+    icon: PlayCircle
+  },
+  'In Progress': {
+    label: 'In Progress',
+    color: 'text-indigo-400',
+    bg: 'bg-indigo-500/10',
+    border: 'border-indigo-500/30',
     icon: PlayCircle
   },
   'Paused': {

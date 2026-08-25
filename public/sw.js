@@ -1,10 +1,11 @@
-// BizFlow ERP Service Worker - Offline-First Caching & Resilient Icon Engine
-const CACHE_NAME = 'bizflow-erp-v4';
+// BizFlow ERP Service Worker - Offline-First Caching & Resilient PWA Engine
+const CACHE_NAME = 'bizflow-erp-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
   '/manifest.webmanifest',
+  '/site.webmanifest',
   '/favicon.ico',
   '/favicon.png',
   '/favicon-96x96.png',
@@ -13,6 +14,9 @@ const STATIC_ASSETS = [
   '/web-app-manifest-192x192.png',
   '/web-app-manifest-512x512.png',
   '/icon.png',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  '/icons/icon-maskable-512.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
   '/icons/icon-maskable-192x192.png',
@@ -55,6 +59,17 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const url = new URL(event.request.url);
+
+  // Handle SPA navigation requests - return index.html when offline
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(async () => {
+        const cached = await caches.match('/index.html') || await caches.match('/');
+        return cached || new Response('Offline - BizFlow ERP', { headers: { 'Content-Type': 'text/html' } });
+      })
+    );
+    return;
+  }
 
   // Bypass Vite development server modules & hot reload assets completely
   if (
@@ -116,10 +131,12 @@ self.addEventListener('fetch', (event) => {
           .catch(async () => {
             // High-resilient fallback: If any icon request fails, serve primary 192 or 512 icon from cache
             if (url.pathname.includes('512') || url.pathname.includes('maskable')) {
-              return (await caches.match('/web-app-manifest-512x512.png')) ||
+              return (await caches.match('/icons/icon-512.png')) ||
+                     (await caches.match('/web-app-manifest-512x512.png')) ||
                      (await caches.match('/icons/icon-512x512.png'));
             }
-            return (await caches.match('/web-app-manifest-192x192.png')) ||
+            return (await caches.match('/icons/icon-192.png')) ||
+                   (await caches.match('/web-app-manifest-192x192.png')) ||
                    (await caches.match('/favicon-96x96.png')) ||
                    (await caches.match('/apple-touch-icon.png'));
           });
@@ -128,7 +145,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-while-revalidate for application assets and documents
+  // Stale-while-revalidate for static application assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
@@ -141,12 +158,7 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => {
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html') || caches.match('/');
-          }
-          return cachedResponse;
-        });
+        .catch(() => cachedResponse);
 
       return cachedResponse || fetchPromise;
     })

@@ -196,6 +196,7 @@ interface ERPContextType {
   addTask: (task: (Omit<Task, 'id' | 'createdDate' | 'loggedHours'> | (Partial<Task> & { title: string; projectId: string }))) => Task;
   updateTaskStatus: (id: string, status: Task['status']) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
+  deleteTask: (id: string) => void;
 
   // Actions: Assets & Inventory
   addAsset: (asset: Omit<Asset, 'id' | 'code'> | (Partial<Asset> & { name: string; category: AssetCategory; serialNumber: string; purchaseDate: string; location: string })) => Asset;
@@ -1565,6 +1566,23 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
   }, []);
 
+  const deleteTask = useCallback((id: string) => {
+    setTasks(prev => {
+      const targetTask = prev.find(t => t.id === id);
+      const updated = prev.filter(t => t.id !== id);
+      if (targetTask) {
+        setProjects(pList => pList.map(p => {
+          if (p.id !== targetTask.projectId) return p;
+          const projTasks = updated.filter(t => t.projectId === targetTask.projectId);
+          const doneCount = projTasks.filter(t => t.status === 'Done').length;
+          const progress = projTasks.length > 0 ? Math.round((doneCount / projTasks.length) * 100) : 0;
+          return { ...p, tasksCount: Math.max(0, (p.tasksCount || 1) - 1), completedTasksCount: doneCount, progressPercent: progress };
+        }));
+      }
+      return updated;
+    });
+  }, []);
+
   // Assets
   const addAsset = useCallback((asset: Omit<Asset, 'id' | 'code'> | (Partial<Asset> & { name: string; category: AssetCategory; serialNumber: string; purchaseDate: string; location: string })): Asset => {
     const count = assets.length + 1;
@@ -2130,6 +2148,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addTask,
     updateTaskStatus,
     updateTask,
+    deleteTask,
     addAsset,
     updateAsset,
     assignAsset,

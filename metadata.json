@@ -1,5 +1,5 @@
 {
-  "name": "BizFlow Workforce ERP",
+  "name": "BizFlow Enterprise ERP",
   "description": "Offline-first enterprise ERP featuring Dexie.js IndexedDB storage, PWA native standalone installation, Procurement & Fleet Logistics, IT Department ticketing & systems management, live QR access control, attendance rollups, payroll snapshots, and high-definition employee credential badges.",
   "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
