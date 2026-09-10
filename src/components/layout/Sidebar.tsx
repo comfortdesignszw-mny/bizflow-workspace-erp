@@ -30,6 +30,8 @@ import {
   Building
 } from 'lucide-react';
 
+import { ResilientAppIcon } from '../common/ResilientAppIcon';
+
 interface SubNavItem {
   id: string;
   label: string;
@@ -187,18 +189,8 @@ export const Sidebar: React.FC<{ isCollapsed: boolean; setIsCollapsed: (c: boole
               onClick={() => handleNavClick('dashboard')}
               className="flex items-center gap-2.5 cursor-pointer overflow-hidden group"
             >
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-neutral-900 border border-neutral-700/80 p-0.5 overflow-hidden flex items-center justify-center shrink-0 shadow-lg shadow-blue-950/40 group-hover:border-blue-500/50 transition-colors">
-                <img
-                  src="/web-app-manifest-192x192.png"
-                  alt="BizFlow ERP Logo"
-                  className="w-full h-full object-cover rounded-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (!target.src.includes('favicon-96x96')) {
-                      target.src = '/favicon-96x96.png';
-                    }
-                  }}
-                />
+              <div className="shrink-0 group-hover:scale-105 transition-transform">
+                <ResilientAppIcon size={38} showGlow />
               </div>
               <div className={`leading-tight truncate ${isCollapsed ? 'md:hidden' : 'block'}`}>
                 <span className="font-bold text-sm text-white tracking-wide block">BizFlow ERP</span>

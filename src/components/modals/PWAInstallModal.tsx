@@ -13,6 +13,7 @@ import {
   Layers,
   ArrowRight
 } from 'lucide-react';
+import { ResilientAppIcon } from '../common/ResilientAppIcon';
 
 export const PWAInstallModal: React.FC = () => {
   const {
@@ -46,19 +47,8 @@ export const PWAInstallModal: React.FC = () => {
         {/* Header with App Brand and Icon */}
         <div className="relative p-6 bg-gradient-to-br from-blue-950/60 via-neutral-900 to-indigo-950/40 border-b border-neutral-800 flex items-start justify-between gap-4">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl shadow-blue-500/20 border border-blue-500/30 shrink-0 bg-neutral-950 p-1 flex items-center justify-center">
-              <img
-                src="/web-app-manifest-192x192.png"
-                alt="BizFlow ERP App Icon"
-                className="w-full h-full object-cover rounded-xl"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  if (!target.src.includes('favicon-96x96')) {
-                    target.src = '/favicon-96x96.png';
-                  }
-                }}
-              />
+            <div className="shrink-0">
+              <ResilientAppIcon size={64} showGlow />
             </div>
             <div>
               <div className="flex items-center gap-2">

@@ -23,7 +23,8 @@ import {
   INITIAL_NOTES,
   INITIAL_VEHICLES,
   INITIAL_DRIVERS,
-  INITIAL_TRIP_LOGS
+  INITIAL_TRIP_LOGS,
+  INITIAL_ENGINEERING_JOB_CARDS
 } from '../data/initialData';
 
 const LOCAL_STORAGE_PREFIX = 'bizflow_erp_';
@@ -207,7 +208,8 @@ export async function performFullSync(): Promise<{ success: boolean; syncedCount
       notes: await db.notes.toArray(),
       vehicles: await db.vehicles.toArray(),
       drivers: await db.drivers.toArray(),
-      tripLogs: await db.tripLogs.toArray()
+      tripLogs: await db.tripLogs.toArray(),
+      engineeringJobCards: await db.engineeringJobCards.toArray()
     };
 
     const res = await fetch('/api/db/sync-all', {
@@ -239,7 +241,7 @@ export async function cleanDatabaseStorage(): Promise<{ success: boolean; messag
       db.vendors, db.purchaseOrders, db.microservices, db.deployPipelines,
       db.deals, db.clientAccounts, db.notes, db.itTickets,
       db.itSystems, db.itDevices, db.itLicenses, db.vehicles,
-      db.drivers, db.tripLogs, db.syncMeta
+      db.drivers, db.tripLogs, db.engineeringJobCards, db.syncMeta
     ];
 
     await Promise.all(tables.map(t => t.clear().catch(() => {})));

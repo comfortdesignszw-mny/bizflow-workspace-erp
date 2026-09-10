@@ -21,15 +21,19 @@ async function startServer() {
 
   app.use(express.json({ limit: '15mb' }));
 
-  // Nginx & Stateless Cluster Load Distribution Middleware
+  // Nginx & Stateless Cluster Load Distribution & Security Hardening Middleware
   app.use((req, res, next) => {
-    // Inject cluster & reverse-proxy headers
+    // Inject cluster & reverse-proxy horizontal distribution headers
     res.setHeader('X-BizFlow-Node-ID', NODE_ID);
-    res.setHeader('X-Load-Balancer', 'Nginx/1.24-Stateless');
+    res.setHeader('X-Load-Balancer', 'Nginx/1.24-Stateless-Horizontal');
     res.setHeader('X-Cluster-Distribution', 'Round-Robin-Stateless');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-BizFlow-Client-ID');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-BizFlow-Client-ID, X-BizFlow-Node-ID');
     
     if (req.method === 'OPTIONS') {
       return res.sendStatus(204);
@@ -661,6 +665,7 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     onlineDatastore['vehicles'] = [];
     onlineDatastore['drivers'] = [];
     onlineDatastore['trip_logs'] = [];
+    onlineDatastore['engineering_job_cards'] = [];
 
     res.json({
       success: true,

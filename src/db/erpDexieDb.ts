@@ -26,7 +26,8 @@ import {
   ITSoftwareLicense,
   Vehicle,
   Driver,
-  TripLog
+  TripLog,
+  EngineeringJobCard
 } from '../types/erp';
 
 export interface SyncMetadata {
@@ -63,13 +64,14 @@ export class BizFlowDexieDatabase extends Dexie {
   vehicles!: Table<Vehicle, string>;
   drivers!: Table<Driver, string>;
   tripLogs!: Table<TripLog, string>;
+  engineeringJobCards!: Table<EngineeringJobCard, string>;
   settings!: Table<CompanySettings & { id: string }, string>;
   syncMeta!: Table<SyncMetadata, string>;
 
   constructor() {
     super('BizFlowWorkforceERP_IndexedDB');
 
-    this.version(3).stores({
+    this.version(4).stores({
       employees: 'id, code, department, status, email, roleTitle',
       accessLogs: 'id, employeeId, timestamp, scanType, method, gate',
       attendanceRollups: 'id, date, employeeId, status',
@@ -96,6 +98,7 @@ export class BizFlowDexieDatabase extends Dexie {
       vehicles: 'id, regNumber, status, type, make, condition',
       drivers: 'id, licenseNumber, fullName, status',
       tripLogs: 'id, tripCode, regNumber, driverId, date, status, loggedBy',
+      engineeringJobCards: 'id, jobCode, department, priority, status, raisedBy, syncedToFinanceExpenseId',
       settings: 'id',
       syncMeta: 'key, lastSyncedAt, isDirty'
     });

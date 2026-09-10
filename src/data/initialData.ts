@@ -26,7 +26,8 @@ import {
   ITSoftwareLicense,
   Vehicle,
   Driver,
-  TripLog
+  TripLog,
+  EngineeringJobCard
 } from '../types/erp';
 
 export const INITIAL_PERSONAS: UserPersona[] = [
@@ -1815,7 +1816,7 @@ export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
     vendorName: 'Apex Cloud & Infrastructure Inc.',
     requestedBy: 'David Alvarez',
     department: 'Engineering',
-    status: 'Delivered',
+    status: 'done',
     items: [
       { id: 'poi-1', name: 'GPU Cluster Compute Nodes (H100 NVLink)', sku: 'SRV-H100-NODE', quantity: 2, unitPrice: 32000, total: 64000 },
       { id: 'poi-2', name: 'Managed Kubernetes Ingress Gateway', sku: 'K8S-INGRESS-PRO', quantity: 1, unitPrice: 4200, total: 4200 }
@@ -1836,7 +1837,7 @@ export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
     vendorName: 'Silicon Valley Biometrics Corp',
     requestedBy: 'Marcus Chen',
     department: 'Human Resources',
-    status: 'Ordered',
+    status: 'in progress',
     items: [
       { id: 'poi-3', name: 'NFC-v4 Biometric Gate Scanners', sku: 'BIO-NFC-V4', quantity: 4, unitPrice: 1850, total: 7400 },
       { id: 'poi-4', name: 'Cryptographic QR Badge Printers', sku: 'BADGE-PRT-SEC', quantity: 2, unitPrice: 1200, total: 2400 }
@@ -1856,7 +1857,7 @@ export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
     vendorName: 'Nordic Office Logistics & Ergonomics',
     requestedBy: 'Eleanor Vance',
     department: 'Operations',
-    status: 'Requested',
+    status: 'approved',
     items: [
       { id: 'poi-5', name: 'Ergonomic Motorized Sit-Stand Desks', sku: 'DSK-SIT-STND', quantity: 12, unitPrice: 650, total: 7800 },
       { id: 'poi-6', name: 'High-Mesh Executive Task Chairs', sku: 'CHR-EXEC-MESH', quantity: 12, unitPrice: 420, total: 5040 }
@@ -1866,6 +1867,23 @@ export const INITIAL_PURCHASE_ORDERS: PurchaseOrder[] = [
     orderDate: '2026-08-13',
     expectedDelivery: '2026-08-25',
     notes: 'New engineering wing workstation provisioning.'
+  },
+  {
+    id: 'po-004',
+    poNumber: 'PO-2026-084',
+    vendorId: 'ven-001',
+    vendorName: 'Apex Cloud & Infrastructure Inc.',
+    requestedBy: 'Comfort (System Admin)',
+    department: 'Engineering',
+    status: 'draft',
+    items: [
+      { id: 'poi-7', name: 'Industrial Edge IoT Gateway Controllers', sku: 'IOT-EDG-V2', quantity: 6, unitPrice: 1450, total: 8700 }
+    ],
+    totalAmount: 8700,
+    currency: 'USD',
+    orderDate: '2026-08-22',
+    expectedDelivery: '2026-09-05',
+    notes: 'Draft requisition for upcoming sub-department automation upgrade.'
   }
 ];
 
@@ -2805,6 +2823,84 @@ export const INITIAL_TRIP_LOGS: TripLog[] = [
     updatedAt: '2026-08-14T17:30:00.000Z',
     remarks: 'Inspection completed successfully, signed site audit report delivered to Executive board.',
     verifiedBySupervisor: true
+  }
+];
+
+export const INITIAL_ENGINEERING_JOB_CARDS: EngineeringJobCard[] = [
+  {
+    id: 'jc-001',
+    jobCode: 'JC-MECH-2026-001',
+    jobName: 'Centrifugal Water Chiller Compressor Overhaul & Seal Replacement',
+    department: 'Mechanical',
+    priority: 'high',
+    details: 'Precision inspection, vibration analysis, dynamic balancing, and mechanical shaft seal replacement on Plant B Chiller #2.',
+    status: 'in progress',
+    estimatedCost: 3850,
+    approvedCost: 3850,
+    actualCost: 2100,
+    assignedTo: 'Marcus Brody (Lead Mechanical Specialist)',
+    equipmentId: 'EQ-CHILLER-02B',
+    location: 'Central Utility Building - Bay 3',
+    raisedBy: 'David Alvarez',
+    raisedAt: '2026-08-18T09:30:00Z',
+    approvedBy: 'Comfort (System Admin)',
+    approvedAt: '2026-08-18T11:00:00Z',
+    syncedToFinanceExpenseId: 'exp-jc-001'
+  },
+  {
+    id: 'jc-002',
+    jobCode: 'JC-ELEC-2026-002',
+    jobName: 'High-Voltage Switchgear Relay Calibration & Thermal Imaging Inspection',
+    department: 'Electrical',
+    priority: 'urgent',
+    details: '11kV substation feeder busbar thermal survey, circuit breaker trip timing verification, and protective relay recertification.',
+    status: 'approved',
+    estimatedCost: 4200,
+    approvedCost: 4200,
+    assignedTo: 'Tariro Ndlovu (Senior Electrical Engineer)',
+    equipmentId: 'SWG-SUB11-MAIN',
+    location: 'Substation Alpha - Transformer Yard',
+    raisedBy: 'Tariro Ndlovu',
+    raisedAt: '2026-08-20T08:15:00Z',
+    approvedBy: 'Comfort (System Admin)',
+    approvedAt: '2026-08-20T10:45:00Z',
+    syncedToFinanceExpenseId: 'exp-jc-002'
+  },
+  {
+    id: 'jc-003',
+    jobCode: 'JC-AUTO-2026-003',
+    jobName: 'SCADA PLC Firmware Security Patch & Pneumatic Valve Actuator Retuning',
+    department: 'Automation & Instrumentation',
+    priority: 'medium',
+    details: 'Siemens S7-1500 controller firmware upgrade, redundancy failover stress testing, and proportional valve calibration on processing line 4.',
+    status: 'raised',
+    estimatedCost: 1950,
+    assignedTo: 'Liam Vance (Instrumentation Specialist)',
+    equipmentId: 'PLC-LINE4-CTRL',
+    location: 'Assembly Hall 4 - Control Cabinet 12',
+    raisedBy: 'Amara Okafor',
+    raisedAt: '2026-08-22T14:00:00Z'
+  },
+  {
+    id: 'jc-004',
+    jobCode: 'JC-CIVIL-2026-004',
+    jobName: 'Heavy Machinery Foundation Grouting & Structural Vibration Isolation',
+    department: 'Civil & Structural',
+    priority: 'medium',
+    details: 'Epoxy resin grout injection for CNC mill baseplate stabilization and dynamic load isolation pad inspection.',
+    status: 'done',
+    estimatedCost: 2600,
+    approvedCost: 2600,
+    actualCost: 2480,
+    assignedTo: 'Chenai Moyo (Structural Engineer)',
+    equipmentId: 'FND-CNC-04',
+    location: 'Fabrication Workshop - Zone D',
+    raisedBy: 'David Alvarez',
+    raisedAt: '2026-08-10T10:00:00Z',
+    approvedBy: 'Comfort (System Admin)',
+    approvedAt: '2026-08-10T13:30:00Z',
+    completedAt: '2026-08-14T17:00:00Z',
+    syncedToFinanceExpenseId: 'exp-jc-004'
   }
 ];
 

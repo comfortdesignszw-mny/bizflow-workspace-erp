@@ -12,7 +12,7 @@ export interface UserPersona {
 }
 
 export type EmployeeStatus = 'Active' | 'On Leave' | 'Probation' | 'Terminated';
-export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Internship';
+export type EmploymentType = 'Full-time' | 'Part-time' | 'Contract' | 'Internship' | 'Probation';
 export type Gender = 'Male' | 'Female' | 'Other';
 
 export interface EmergencyContact {
@@ -21,11 +21,40 @@ export interface EmergencyContact {
   phone: string;
 }
 
+export type DisbursementMethod = 
+  | 'Direct Deposit (ACH)'
+  | 'Electronic Funds Transfer'
+  | 'Mobile Money'
+  | 'Bank Wire'
+  | 'Check'
+  | 'Cash';
+
 export interface BankDetails {
   bankName: string;
   accountNumber: string;
   accountName: string;
+  branchCode?: string;
   routingNumber?: string;
+  swiftCode?: string;
+  disbursementMethod?: DisbursementMethod;
+}
+
+export interface EmployeeEarningConfig {
+  id: string;
+  name: string; // e.g. "Overtime", "Performance Incentive", "Housing Allowance", "Shift Allowance"
+  type: 'percentage' | 'fixed'; // percentage of baseSalary or fixed amount
+  value: number; // e.g. 10 (10%) or 250 ($250)
+  isRecurring: boolean; // if true, automatically applied during batch payroll runs
+  category?: 'overtime' | 'allowance' | 'bonus' | 'commission' | 'other';
+}
+
+export interface EmployeeDeductionConfig {
+  id: string;
+  name: string; // e.g. "PAYE", "NASA / NSSA", "Loan Installment", "Medical Aid", "Pension Fund", "Union Dues"
+  type: 'percentage' | 'fixed'; // percentage of baseSalary or fixed amount
+  value: number; // e.g. 15 (15%) or 100 ($100)
+  isRecurring: boolean; // if true, automatically applied during batch payroll runs
+  category?: 'tax' | 'social_security' | 'loan' | 'insurance' | 'pension' | 'other';
 }
 
 export interface Employee {
@@ -53,6 +82,8 @@ export interface Employee {
   nationalId: string;
   emergencyContact: EmergencyContact;
   bankDetails: BankDetails;
+  configuredEarnings?: EmployeeEarningConfig[];
+  configuredDeductions?: EmployeeDeductionConfig[];
   notes?: string;
 }
 
@@ -396,7 +427,9 @@ export interface CompanySettings {
 }
 
 // Procurement, Logistics & Fleet Types
-export type PurchaseOrderStatus = 'Draft' | 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Cancelled';
+export type PurchaseOrderStatus = 
+  | 'Draft' | 'Requested' | 'Approved' | 'Ordered' | 'Delivered' | 'Cancelled'
+  | 'draft' | 'approved' | 'in progress' | 'done';
 
 export interface PurchaseOrderItem {
   id: string;
@@ -702,5 +735,39 @@ export interface ITSoftwareLicense {
   category: 'Productivity' | 'Security' | 'DevOps' | 'Design' | 'Infrastructure' | 'Developer Tools' | string;
   assignedDepartments?: string[];
   licenseKeyMasked?: string;
+}
+
+// Engineering Sub-Departments & Job Cards
+export type EngineeringSubDepartment = 
+  | 'Mechanical'
+  | 'Electrical'
+  | 'Civil & Structural'
+  | 'Automation & Instrumentation'
+  | 'Software & Systems'
+  | 'Chemical & Process';
+
+export type JobCardStatus = 'raised' | 'approved' | 'in progress' | 'done';
+export type JobCardPriority = 'low' | 'medium' | 'high' | 'urgent';
+
+export interface EngineeringJobCard {
+  id: string;
+  jobCode: string; // e.g. "JC-MECH-001"
+  jobName: string;
+  department: EngineeringSubDepartment;
+  priority: JobCardPriority;
+  details: string;
+  status: JobCardStatus;
+  estimatedCost: number;
+  approvedCost?: number;
+  actualCost?: number;
+  assignedTo?: string;
+  equipmentId?: string;
+  location?: string;
+  raisedBy: string;
+  raisedAt: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  completedAt?: string;
+  syncedToFinanceExpenseId?: string;
 }
 

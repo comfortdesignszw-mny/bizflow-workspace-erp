@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useERP } from '../../context/ERPContext';
 import { Download, X, Smartphone, Monitor } from 'lucide-react';
+import { ResilientAppIcon } from './ResilientAppIcon';
 
 export const PWAInstallBanner: React.FC = () => {
   const { installPWA, isStandaloneMode, setIsPWAInstallModalOpen } = useERP();
@@ -48,19 +49,8 @@ export const PWAInstallBanner: React.FC = () => {
       id="pwa-floating-install-banner"
     >
       <div className="p-4 rounded-2xl bg-neutral-900/95 border border-blue-500/40 shadow-2xl shadow-black/80 backdrop-blur-md flex items-start gap-3 text-neutral-100">
-        <div className="w-12 h-12 rounded-xl overflow-hidden shadow-md shadow-blue-500/20 border border-blue-400/30 shrink-0 bg-neutral-950 p-0.5 flex items-center justify-center">
-          <img
-            src="/web-app-manifest-192x192.png"
-            alt="BizFlow ERP App Logo"
-            className="w-full h-full object-cover rounded-lg"
-            referrerPolicy="no-referrer"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              if (!target.src.includes('favicon-96x96')) {
-                target.src = '/favicon-96x96.png';
-              }
-            }}
-          />
+        <div className="shrink-0">
+          <ResilientAppIcon size={48} showGlow />
         </div>
 
         <div className="flex-1 min-w-0">
