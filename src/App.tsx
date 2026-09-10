@@ -25,9 +25,17 @@ import { PayslipModal } from './components/modals/PayslipModal';
 import { InvoiceModal } from './components/modals/InvoiceModal';
 import { PWAInstallModal } from './components/modals/PWAInstallModal';
 import { PWAInstallBanner } from './components/common/PWAInstallBanner';
+import { AuthPortal } from './components/auth/AuthPortal';
+import { DepartmentPermissionsModal } from './components/settings/DepartmentPermissionsModal';
 
 const ERPAppContent: React.FC = () => {
-  const { activeModule, setActiveModule } = useERP();
+  const {
+    activeModule,
+    setActiveModule,
+    isAuthenticated,
+    isPermissionsModalOpen,
+    setIsPermissionsModalOpen,
+  } = useERP();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // Handle URL deep links on initial mount or popstate
@@ -87,6 +95,16 @@ const ERPAppContent: React.FC = () => {
     }
   };
 
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col antialiased selection:bg-blue-600 selection:text-white" id="bizflow-erp-auth-root">
+        <AuthPortal />
+        <PWAInstallModal />
+        <PWAInstallBanner />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col md:flex-row antialiased selection:bg-blue-600 selection:text-white" id="bizflow-erp-root">
       
@@ -109,6 +127,10 @@ const ERPAppContent: React.FC = () => {
       <InvoiceModal />
       <PWAInstallModal />
       <PWAInstallBanner />
+      <DepartmentPermissionsModal
+        isOpen={isPermissionsModalOpen}
+        onClose={() => setIsPermissionsModalOpen(false)}
+      />
     </div>
   );
 };

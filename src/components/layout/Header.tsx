@@ -58,7 +58,10 @@ export const Header: React.FC = () => {
     theme,
     toggleTheme,
     activeModule,
-    setProcurementTab
+    setProcurementTab,
+    userAccount,
+    logout,
+    setIsPermissionsModalOpen
   } = useERP();
 
   const [isPersonaMenuOpen, setIsPersonaMenuOpen] = useState(false);
@@ -474,15 +477,55 @@ export const Header: React.FC = () => {
               <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />
             </button>
 
-            {/* Persona Menu Dropdown */}
+            {/* Persona & Auth Menu Dropdown */}
             {isPersonaMenuOpen && (
-              <div className="absolute right-0 mt-2 w-72 rounded-2xl bg-neutral-900 border border-neutral-700 shadow-2xl p-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-2 border-b border-neutral-800">
-                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Switch ERP Persona / RBAC View</span>
-                  <p className="text-[11px] text-neutral-500 mt-0.5">Test permissions & dashboard layouts across organizational roles</p>
+              <div className="absolute right-0 mt-2 w-80 rounded-2xl bg-neutral-900 border border-neutral-700 shadow-2xl p-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
+                {/* Active Account Identity Card */}
+                <div className="p-3 bg-neutral-950/70 rounded-xl border border-neutral-800/80 mb-2">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-10 h-10 rounded-full object-cover border-2 border-blue-500/50 bg-neutral-800 shrink-0"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="text-xs font-bold text-white truncate">{currentUser.name}</p>
+                        {userAccount?.isFirstAdmin ? (
+                          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-amber-950 text-amber-400 border border-amber-800">
+                            SUPER ADMIN
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 uppercase">
+                            {currentUser.role}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-neutral-400 truncate">{currentUser.email}</p>
+                      <p className="text-[10px] text-blue-400 truncate font-medium">{currentUser.department || 'Executive Department'}</p>
+                    </div>
+                  </div>
+
+                  {/* Admin Department Leaders Action */}
+                  {(currentUser.role === 'ADMIN' || userAccount?.role === 'ADMIN') && (
+                    <button
+                      onClick={() => {
+                        setIsPermissionsModalOpen(true);
+                        setIsPersonaMenuOpen(false);
+                      }}
+                      className="mt-2.5 w-full py-1.5 px-2.5 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 text-blue-300 font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors cursor-pointer text-[11px]"
+                    >
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>Manage Department Heads &amp; Permissions</span>
+                    </button>
+                  )}
                 </div>
 
-                <div className="py-1 space-y-1 max-h-64 overflow-y-auto">
+                <div className="px-3 py-1.5 border-b border-neutral-800 flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-neutral-400 tracking-wider">Switch Persona / Test RBAC</span>
+                </div>
+
+                <div className="py-1 space-y-1 max-h-48 overflow-y-auto">
                   {availablePersonas.map((p) => {
                     const isActive = p.id === currentUser.id;
                     return (
@@ -513,15 +556,25 @@ export const Header: React.FC = () => {
                     title="Purge all sample data and initialize clean database for production"
                   >
                     <Database className="w-3 h-3" />
-                    Clean DB (Production)
+                    Clean DB
                   </button>
+                  
+                  <button
+                    onClick={() => { logout(); setIsPersonaMenuOpen(false); }}
+                    className="flex items-center gap-1.5 text-[11px] text-amber-400 hover:text-amber-300 font-medium transition-colors cursor-pointer"
+                    title="Sign out of current account"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Sign Out
+                  </button>
+
                   <button
                     onClick={() => { resetAllDataToDefault(); setIsPersonaMenuOpen(false); }}
                     className="flex items-center gap-1.5 text-[11px] text-neutral-400 hover:text-white transition-colors cursor-pointer"
                     title="Reload sample demonstration records"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Seed Demo
+                    Reset
                   </button>
                 </div>
               </div>

@@ -73,6 +73,11 @@ import {
   INITIAL_DRIVERS,
   INITIAL_TRIP_LOGS
 } from '../data/initialData';
+import {
+  UserAccount,
+  DepartmentPermission,
+} from '../types/auth';
+import { authService } from '../db/authDexieService';
 import { db } from '../db/erpDexieDb';
 import {
   getLocalSandbox,
@@ -99,6 +104,20 @@ interface ERPContextType {
   setCurrentUser: (user: UserPersona) => void;
   availablePersonas: UserPersona[];
   hasRole: (allowedRoles: UserRole[]) => boolean;
+
+  // Authentication & Department Leadership RBAC
+  userAccount: UserAccount | null;
+  allUserAccounts: UserAccount[];
+  isAuthenticated: boolean;
+  loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
+  registerWithEmail: (name: string, email: string, pass: string, dept?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (profile: { email: string; name: string; avatar?: string }) => Promise<{ success: boolean; error?: string }>;
+  logout: () => void;
+  updateUserPermissions: (userId: string, updates: any) => Promise<{ success: boolean; error?: string }>;
+  deleteUserAccount: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  hasPermission: (permissionKey: keyof DepartmentPermission, department?: string) => boolean;
+  isPermissionsModalOpen: boolean;
+  setIsPermissionsModalOpen: (open: boolean) => void;
 
   // Active module navigation
   activeModule: string;
@@ -308,7 +327,26 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return false;
   });
 
-  const [currentUser, setCurrentUser] = useState<UserPersona>(() => getLocalSandbox('user', INITIAL_PERSONAS[0]));
+  const [userAccount, setUserAccount] = useState<UserAccount | null>(() => authService.getSession());
+  const [allUserAccounts, setAllUserAccounts] = useState<UserAccount[]>([]);
+  const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState<UserPersona>(() => {
+    const session = authService.getSession();
+    if (session) {
+      return {
+        id: session.id,
+        name: session.name,
+        email: session.email,
+        role: session.role,
+        roleTitle: session.roleTitle,
+        avatar: session.avatar,
+        department: session.department,
+        employeeId: session.id
+      };
+    }
+    return getLocalSandbox('user', INITIAL_PERSONAS[0]);
+  });
   const [activeModule, setActiveModule] = useState<string>('dashboard');
 
   const [employees, setEmployees] = useState<Employee[]>(() => getLocalSandbox('employees', INITIAL_EMPLOYEES));
@@ -574,6 +612,24 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (vehs && vehs.length) setVehicles(vehs);
         if (drvs && drvs.length) setDrivers(drvs);
         if (trips && trips.length) setTripLogs(trips);
+
+        // Hydrate accounts & auth session
+        const storedAccounts = await authService.getAccounts();
+        setAllUserAccounts(storedAccounts);
+        const activeSession = authService.getSession();
+        if (activeSession) {
+          setUserAccount(activeSession);
+          setCurrentUser({
+            id: activeSession.id,
+            name: activeSession.name,
+            email: activeSession.email,
+            role: activeSession.role,
+            roleTitle: activeSession.roleTitle,
+            avatar: activeSession.avatar,
+            department: activeSession.department,
+            employeeId: activeSession.id
+          });
+        }
       } catch (err) {
         console.warn('[Dexie Initial Boot] Hydration notice:', err);
       }
@@ -655,9 +711,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [deferredPrompt]);
 
   const hasRole = useCallback((allowedRoles: UserRole[]): boolean => {
-    if (currentUser.role === 'ADMIN') return true;
+    if (currentUser.role === 'ADMIN' || userAccount?.role === 'ADMIN' || userAccount?.isFirstAdmin) return true;
     return allowedRoles.includes(currentUser.role);
-  }, [currentUser]);
+  }, [currentUser, userAccount]);
 
   const logAudit = useCallback((action: string, module: string, details: string, status: 'SUCCESS' | 'WARNING' | 'ERROR' = 'SUCCESS') => {
     const newLog: AuditLog = {
@@ -673,6 +729,135 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
     setAuditLogs(prev => [newLog, ...prev]);
   }, [currentUser]);
+
+  const hasPermission = useCallback((permissionKey: keyof DepartmentPermission, department?: string): boolean => {
+    // Super Administrator has overall permission to the entire app
+    if (currentUser.role === 'ADMIN' || userAccount?.role === 'ADMIN' || userAccount?.isFirstAdmin) {
+      return true;
+    }
+    if (!userAccount) return false;
+
+    // Check specific permission toggle
+    const allowed = !!userAccount.permissions?.[permissionKey];
+    if (!allowed) return false;
+
+    // If department scoped, check department match
+    if (userAccount.permissions?.departmentScoped && department) {
+      const assigned = userAccount.assignedDepartments || [userAccount.department];
+      if (!assigned.includes('ALL') && !assigned.includes(department)) {
+        return false;
+      }
+    }
+
+    return true;
+  }, [currentUser.role, userAccount]);
+
+  const loginWithEmail = useCallback(async (email: string, pass: string) => {
+    const res = await authService.login(email, pass);
+    if (res.success && res.user) {
+      setUserAccount(res.user);
+      setCurrentUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.role,
+        roleTitle: res.user.roleTitle,
+        avatar: res.user.avatar,
+        department: res.user.department,
+        employeeId: res.user.id
+      });
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      logAudit('USER_LOGIN', 'Authentication', `User ${res.user.name} (${res.user.email}) signed in as ${res.user.role}.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [logAudit]);
+
+  const registerWithEmail = useCallback(async (name: string, email: string, pass: string, dept: string = 'Executive Leadership') => {
+    const res = await authService.register(name, email, pass, dept);
+    if (res.success && res.user) {
+      setUserAccount(res.user);
+      setCurrentUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.role,
+        roleTitle: res.user.roleTitle,
+        avatar: res.user.avatar,
+        department: res.user.department,
+        employeeId: res.user.id
+      });
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      logAudit('USER_REGISTERED', 'Authentication', `Account created for ${res.user.name} (${res.user.email}) as ${res.user.role}.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [logAudit]);
+
+  const loginWithGoogle = useCallback(async (profile: { email: string; name: string; avatar?: string }) => {
+    const res = await authService.loginWithGoogle(profile);
+    if (res.success && res.user) {
+      setUserAccount(res.user);
+      setCurrentUser({
+        id: res.user.id,
+        name: res.user.name,
+        email: res.user.email,
+        role: res.user.role,
+        roleTitle: res.user.roleTitle,
+        avatar: res.user.avatar,
+        department: res.user.department,
+        employeeId: res.user.id
+      });
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      logAudit('GOOGLE_AUTH', 'Authentication', `User ${res.user.name} authenticated via Google as ${res.user.role}.`);
+      return { success: true };
+    }
+    return { success: false, error: 'Google sign-in could not be completed.' };
+  }, [logAudit]);
+
+  const logout = useCallback(() => {
+    authService.logout();
+    setUserAccount(null);
+    logAudit('USER_LOGOUT', 'Authentication', `User ${currentUser.name} signed out.`);
+  }, [currentUser.name, logAudit]);
+
+  const updateUserPermissions = useCallback(async (userId: string, updates: any) => {
+    const res = await authService.updateUserPermissions(userId, updates);
+    if (res.success && res.user) {
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      if (userAccount && userAccount.id === userId) {
+        setUserAccount(res.user);
+        setCurrentUser({
+          id: res.user.id,
+          name: res.user.name,
+          email: res.user.email,
+          role: res.user.role,
+          roleTitle: res.user.roleTitle,
+          avatar: res.user.avatar,
+          department: res.user.department,
+          employeeId: res.user.id
+        });
+      }
+      logAudit('PERMISSIONS_UPDATED', 'RBAC & Authorization', `Updated permissions for user ${res.user.name}: Role=${res.user.role}, Dept=${res.user.department}.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [userAccount, logAudit]);
+
+  const deleteUserAccount = useCallback(async (userId: string) => {
+    const res = await authService.deleteAccount(userId);
+    if (res.success) {
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      logAudit('ACCOUNT_DELETED', 'RBAC & Authorization', `User account ${userId} deleted.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [logAudit]);
 
   // Derived: "Workforce currently inside" — COUNT(last scan per employee today = IN)
   const currentlyInsideEmployees = useMemo(() => {
@@ -2086,6 +2271,18 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCurrentUser,
     availablePersonas: INITIAL_PERSONAS,
     hasRole,
+    userAccount,
+    allUserAccounts,
+    isAuthenticated: !!userAccount,
+    loginWithEmail,
+    registerWithEmail,
+    loginWithGoogle,
+    logout,
+    updateUserPermissions,
+    deleteUserAccount,
+    hasPermission,
+    isPermissionsModalOpen,
+    setIsPermissionsModalOpen,
     activeModule,
     setActiveModule,
     employees,

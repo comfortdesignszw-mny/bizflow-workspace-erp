@@ -509,6 +509,31 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
   // In-memory online database store for synchronizing offline clients
   const onlineDatastore: Record<string, any[]> = {};
 
+  // User Authentication & RBAC Datastore Endpoints
+  app.get('/api/auth/users', (req, res) => {
+    const users = onlineDatastore['users'] || [];
+    res.json({ success: true, users, nodeId: NODE_ID });
+  });
+
+  app.post('/api/auth/sync-users', (req, res) => {
+    const { accounts } = req.body;
+    if (Array.isArray(accounts)) {
+      onlineDatastore['users'] = accounts;
+    }
+    res.json({ success: true, count: (onlineDatastore['users'] || []).length, nodeId: NODE_ID });
+  });
+
+  app.post('/api/auth/update-user', (req, res) => {
+    const { userId, updates } = req.body;
+    if (!onlineDatastore['users']) onlineDatastore['users'] = [];
+    const idx = onlineDatastore['users'].findIndex((u: any) => u.id === userId);
+    if (idx >= 0) {
+      onlineDatastore['users'][idx] = { ...onlineDatastore['users'][idx], ...updates, updatedAt: new Date().toISOString() };
+      return res.json({ success: true, user: onlineDatastore['users'][idx], nodeId: NODE_ID });
+    }
+    res.status(404).json({ error: 'User account not found' });
+  });
+
   // GET Employees API (stateless REST query)
   app.get('/api/employees', (req, res) => {
     const query = (req.query.q as string || '').toLowerCase();

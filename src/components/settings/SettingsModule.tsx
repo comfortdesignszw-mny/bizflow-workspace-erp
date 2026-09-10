@@ -48,7 +48,10 @@ export const SettingsModule: React.FC = () => {
     projects,
     invoices,
     notes,
-    payrollRuns
+    payrollRuns,
+    allUserAccounts,
+    setIsPermissionsModalOpen,
+    userAccount
   } = useERP();
 
   const [formSettings, setFormSettings] = useState<CompanySettings>(settings);
@@ -260,6 +263,62 @@ export const SettingsModule: React.FC = () => {
               </div>
               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">High Contrast</span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Department Leadership & RBAC Authority Banner */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-950/40 via-neutral-900 to-purple-950/30 border border-blue-900/40 space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+              <Shield className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                Department Heads &amp; Manager Permissions
+                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-300 border border-blue-700">
+                  Role-Based Access
+                </span>
+              </h3>
+              <p className="text-xs text-neutral-400">
+                Designate department leaders, assign operational managers, and set granular authority scopes.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsPermissionsModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/20 flex items-center gap-2 transition-colors cursor-pointer shrink-0"
+          >
+            <Sliders className="w-4 h-4" />
+            <span>Configure Leaders &amp; Permissions</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 text-xs">
+          <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800">
+            <span className="text-[10px] text-neutral-500 uppercase font-semibold block">Registered Accounts</span>
+            <span className="text-lg font-extrabold text-white">{allUserAccounts.length}</span>
+          </div>
+          <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800">
+            <span className="text-[10px] text-purple-400 uppercase font-semibold block">Department Heads</span>
+            <span className="text-lg font-extrabold text-purple-300">
+              {allUserAccounts.filter(u => u.role === 'DEPARTMENT_HEAD').length}
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800">
+            <span className="text-[10px] text-blue-400 uppercase font-semibold block">Department Managers</span>
+            <span className="text-lg font-extrabold text-blue-300">
+              {allUserAccounts.filter(u => u.role === 'MANAGER').length}
+            </span>
+          </div>
+          <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800">
+            <span className="text-[10px] text-amber-400 uppercase font-semibold block">System Super Admins</span>
+            <span className="text-lg font-extrabold text-amber-300">
+              {allUserAccounts.filter(u => u.role === 'ADMIN').length}
+            </span>
           </div>
         </div>
       </div>
