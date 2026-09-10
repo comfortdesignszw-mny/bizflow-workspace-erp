@@ -760,13 +760,39 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     return res.json({
       name: "BizFlow Enterprise ERP",
       short_name: "BizFlow ERP",
-      icons: [
-        { src: "/web-app-manifest-192x192.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: "/web-app-manifest-512x512.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
-      ],
+      description: "Offline-First Enterprise Resource Planning & Workforce Management Platform with Dexie.JS IndexedDB, biometric access, and multi-department analytics.",
+      start_url: "/",
+      id: "/",
+      scope: "/",
+      display: "standalone",
+      display_override: ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
+      orientation: "any",
       theme_color: "#06071b",
       background_color: "#06071b",
-      display: "standalone"
+      icons: [
+        { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        { src: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+        { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+        { src: "/icons/icon-maskable-192x192.png", sizes: "192x192", type: "image/png", purpose: "maskable" }
+      ],
+      screenshots: [
+        {
+          src: "/screenshots/desktop-dashboard.png",
+          sizes: "1920x1080",
+          type: "image/png",
+          form_factor: "wide",
+          label: "BizFlow ERP Desktop Operations Dashboard"
+        },
+        {
+          src: "/screenshots/mobile-operations.png",
+          sizes: "750x1334",
+          type: "image/png",
+          form_factor: "narrow",
+          label: "BizFlow ERP Mobile Real-Time Biometric & Project Operations"
+        }
+      ]
     });
   });
 
@@ -798,7 +824,7 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     return res.sendFile(fallback192);
   };
 
-  // Register dedicated routes for all standard PWA & Browser icon locations
+  // Register dedicated routes for all standard PWA & Browser icon locations and screenshots
   app.get([
     '/favicon.ico',
     '/favicon.png',
@@ -810,8 +836,15 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     '/apple-touch-icon-precomposed.png',
     '/web-app-manifest-192x192.png',
     '/web-app-manifest-512x512.png',
+    '/icon-192.png',
+    '/icon-512.png',
+    '/icon-maskable-512.png',
+    '/icon-192x192.png',
+    '/icon-512x512.png',
+    '/icon-maskable-192x192.png',
     '/icon.png',
-    '/icons/:iconName'
+    '/icons/:iconName',
+    '/screenshots/:screenshotName'
   ], handleIconRequest);
 
   // Explicitly serve public assets with CORS and PWA headers

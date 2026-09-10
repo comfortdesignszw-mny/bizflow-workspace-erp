@@ -51,6 +51,22 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "BizFlow ERP Desktop Operations Dashboard"
+    },
+    {
+      "src": "/screenshots/mobile-operations.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "BizFlow ERP Mobile Real-Time Biometric & Project Operations"
+    }
+  ],
   "categories": ["business", "productivity", "utilities", "finance"],
   "shortcuts": [
     {

@@ -2,7 +2,7 @@
 export const appManifest = {
   name: "BizFlow Enterprise ERP",
   short_name: "BizFlow ERP",
-  description: "Offline-First Enterprise Resource Planning & Workforce Management Platform",
+  description: "Offline-First Enterprise Resource Planning & Workforce Management Platform with Dexie.JS IndexedDB, biometric access, and multi-department analytics.",
   start_url: "/",
   id: "/",
   display: "standalone",
@@ -11,46 +11,59 @@ export const appManifest = {
   theme_color: "#06071b",
   icons: [
     {
-      src: "/web-app-manifest-192x192.png",
+      src: "/icons/icon-192.png",
       sizes: "192x192",
       type: "image/png",
-      purpose: "any maskable"
+      purpose: "any"
     },
     {
-      src: "/icons/web-app-manifest-192x192.png",
+      src: "/icons/icon-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "any"
+    },
+    {
+      src: "/icons/icon-maskable-512.png",
+      sizes: "512x512",
+      type: "image/png",
+      purpose: "maskable"
+    },
+    {
+      src: "/icons/icon-192x192.png",
       sizes: "192x192",
       type: "image/png",
-      purpose: "any maskable"
+      purpose: "any"
     },
     {
-      src: "/web-app-manifest-512x512.png",
+      src: "/icons/icon-512x512.png",
       sizes: "512x512",
       type: "image/png",
-      purpose: "any maskable"
+      purpose: "any"
     },
     {
-      src: "/icons/web-app-manifest-512x512.png",
-      sizes: "512x512",
+      src: "/icons/icon-maskable-192x192.png",
+      sizes: "192x192",
       type: "image/png",
-      purpose: "any maskable"
-    },
-    {
-      src: "/apple-touch-icon.png",
-      sizes: "180x180",
-      type: "image/png"
-    },
-    {
-      src: "/favicon-96x96.png",
-      sizes: "96x96",
-      type: "image/png"
-    },
-    {
-      src: "/icon.png",
-      sizes: "512x512",
-      type: "image/png"
+      purpose: "maskable"
     }
   ],
-  categories: ["business", "productivity", "utilities"]
+  screenshots: [
+    {
+      src: "/screenshots/desktop-dashboard.png",
+      sizes: "1920x1080",
+      type: "image/png",
+      form_factor: "wide",
+      label: "BizFlow ERP Desktop Operations Dashboard"
+    },
+    {
+      src: "/screenshots/mobile-operations.png",
+      sizes: "750x1334",
+      type: "image/png",
+      form_factor: "narrow",
+      label: "BizFlow ERP Mobile Real-Time Biometric & Project Operations"
+    }
+  ],
+  categories: ["business", "productivity", "utilities", "finance"]
 };
 
 // Automatic manifest link injector if not present
@@ -63,4 +76,3 @@ if (typeof document !== 'undefined') {
     document.head.appendChild(link);
   }
 }
-
