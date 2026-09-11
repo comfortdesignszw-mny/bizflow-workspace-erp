@@ -87,6 +87,7 @@ export interface Employee {
   configuredDeductions?: EmployeeDeductionConfig[];
   biometricEnrolled?: boolean;
   nfcCardId?: string;
+  profileCompleted?: boolean;
   notes?: string;
 }
 

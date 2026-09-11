@@ -61,8 +61,28 @@ export const ProcurementModule: React.FC = () => {
   const [isAddPOModalOpen, setIsAddPOModalOpen] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
 
+  // Status normalizer to ensure all 4 stages: draft, approved, in progress, done
+  const normalizePOStatus = (status: PurchaseOrderStatus): 'draft' | 'approved' | 'in progress' | 'done' => {
+    if (status === 'draft' || status === 'Requested') return 'draft';
+    if (status === 'approved' || status === 'Approved') return 'approved';
+    if (status === 'in progress' || status === 'Ordered') return 'in progress';
+    if (status === 'done' || status === 'Delivered') return 'done';
+    return 'draft';
+  };
+
   // New Purchase Order form state
-  const [newPO, setNewPO] = useState({
+  const [newPO, setNewPO] = useState<{
+    vendorId: string;
+    vendorName: string;
+    requestedBy: string;
+    department: string;
+    items: { id: string; name: string; sku: string; quantity: number; unitPrice: number; total: number }[];
+    totalAmount: number;
+    currency: string;
+    expectedDelivery: string;
+    notes: string;
+    status: PurchaseOrderStatus;
+  }>({
     vendorId: vendors[0]?.id || '',
     vendorName: vendors[0]?.name || '',
     requestedBy: currentUser.name,
@@ -73,23 +93,37 @@ export const ProcurementModule: React.FC = () => {
     totalAmount: 1800,
     currency: 'USD',
     expectedDelivery: '2026-08-28',
-    notes: 'Urgent server room upgrade.'
+    notes: 'Urgent server room upgrade.',
+    status: 'draft'
   });
 
   const filteredPOs = purchaseOrders.filter(po => {
     const matchesSearch = po.poNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
       po.vendorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       po.department.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || po.status === statusFilter;
+    const normalized = normalizePOStatus(po.status);
+    const matchesStatus = statusFilter === 'ALL' || normalized === statusFilter || po.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
-  const totalProcurementSpend = purchaseOrders
-    .filter(po => po.status !== 'Cancelled')
+  // Calculate Accounts Department records by PO Stage
+  const draftSpend = purchaseOrders
+    .filter(po => normalizePOStatus(po.status) === 'draft')
     .reduce((sum, po) => sum + po.totalAmount, 0);
 
-  const pendingDeliveryCount = purchaseOrders.filter(po => po.status === 'Ordered' || po.status === 'Requested').length;
-  const deliveredCount = purchaseOrders.filter(po => po.status === 'Delivered').length;
+  const approvedSpend = purchaseOrders
+    .filter(po => normalizePOStatus(po.status) === 'approved')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const inProgressSpend = purchaseOrders
+    .filter(po => normalizePOStatus(po.status) === 'in progress')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const doneSpend = purchaseOrders
+    .filter(po => normalizePOStatus(po.status) === 'done')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const totalProcurementSpend = draftSpend + approvedSpend + inProgressSpend + doneSpend;
 
   const handleCreatePO = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,21 +131,50 @@ export const ProcurementModule: React.FC = () => {
     addPurchaseOrder({
       ...newPO,
       vendorName: vendor ? vendor.name : newPO.vendorName,
-      status: 'Requested'
+      status: newPO.status
     });
     setIsAddPOModalOpen(false);
   };
 
   const getStatusBadge = (status: PurchaseOrderStatus) => {
-    switch (status) {
-      case 'Delivered':
-        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Delivered</span>;
-      case 'Ordered':
-        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1"><Truck className="w-3 h-3" /> In Transit / Ordered</span>;
-      case 'Requested':
-        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1"><Clock className="w-3 h-3" /> Requisition Pending</span>;
-      case 'Approved':
-        return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1"><FileCheck className="w-3 h-3" /> Approved</span>;
+    const stage = normalizePOStatus(status);
+    switch (stage) {
+      case 'draft':
+        return (
+          <div className="space-y-0.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 w-fit">
+              <Clock className="w-3 h-3" /> Draft Stage
+            </span>
+            <span className="text-[10px] text-neutral-400 font-mono block">Accounts: Uncommitted</span>
+          </div>
+        );
+      case 'approved':
+        return (
+          <div className="space-y-0.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/30 flex items-center gap-1 w-fit">
+              <FileCheck className="w-3 h-3" /> Approved Stage
+            </span>
+            <span className="text-[10px] text-blue-300 font-mono block">Accounts: Committed Liability</span>
+          </div>
+        );
+      case 'in progress':
+        return (
+          <div className="space-y-0.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1 w-fit">
+              <Truck className="w-3 h-3" /> In Progress Stage
+            </span>
+            <span className="text-[10px] text-purple-300 font-mono block">Accounts: Processing Transit</span>
+          </div>
+        );
+      case 'done':
+        return (
+          <div className="space-y-0.5">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 w-fit">
+              <CheckCircle2 className="w-3 h-3" /> Done (Settled)
+            </span>
+            <span className="text-[10px] text-emerald-400 font-mono block">Accounts: Fully Settled & Closed</span>
+          </div>
+        );
       default:
         return <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-neutral-800 text-neutral-400">{status}</span>;
     }
@@ -145,57 +208,61 @@ export const ProcurementModule: React.FC = () => {
         </div>
       </div>
 
-      {/* Metric Cards */}
+      {/* Metric Cards: 4 Status Stages with Accounts Department Spend Records */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Stage 1: Draft */}
         <div className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
-            <DollarSign className="w-5 h-5" />
+          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <Clock className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-neutral-400 font-medium">Committed Spend</div>
-            <div className="text-xl font-bold text-white font-mono mt-0.5">
-              ${totalProcurementSpend.toLocaleString()}
+            <div className="text-xs text-neutral-400 font-medium">Stage 1: Draft Requisitions</div>
+            <div className="text-xl font-bold text-amber-400 font-mono mt-0.5">
+              ${draftSpend.toLocaleString()}
             </div>
-            <span className="text-[10px] text-purple-400 font-medium">Across all approved POs</span>
+            <span className="text-[10px] text-neutral-400 font-medium">Accounts: Uncommitted Allocation</span>
           </div>
         </div>
 
+        {/* Stage 2: Approved */}
         <div className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 flex items-center gap-4">
           <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
+            <FileCheck className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs text-neutral-400 font-medium">Stage 2: Approved in Accounts</div>
+            <div className="text-xl font-bold text-blue-400 font-mono mt-0.5">
+              ${approvedSpend.toLocaleString()}
+            </div>
+            <span className="text-[10px] text-blue-400 font-medium">Accounts: Committed Liability</span>
+          </div>
+        </div>
+
+        {/* Stage 3: In Progress */}
+        <div className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <Truck className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-neutral-400 font-medium">In Transit / Pending</div>
-            <div className="text-xl font-bold text-white font-mono mt-0.5">
-              {pendingDeliveryCount} Orders
+            <div className="text-xs text-neutral-400 font-medium">Stage 3: In Progress / Transit</div>
+            <div className="text-xl font-bold text-purple-300 font-mono mt-0.5">
+              ${inProgressSpend.toLocaleString()}
             </div>
-            <span className="text-[10px] text-blue-400 font-medium">Scheduled this month</span>
+            <span className="text-[10px] text-purple-300 font-medium">Accounts: Active Fulfillment</span>
           </div>
         </div>
 
+        {/* Stage 4: Done */}
         <div className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 flex items-center gap-4">
           <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
-            <div className="text-xs text-neutral-400 font-medium">Completed Receipts</div>
-            <div className="text-xl font-bold text-white font-mono mt-0.5">
-              {deliveredCount} Delivered
+            <div className="text-xs text-neutral-400 font-medium">Stage 4: Done (Settled)</div>
+            <div className="text-xl font-bold text-emerald-400 font-mono mt-0.5">
+              ${doneSpend.toLocaleString()}
             </div>
-            <span className="text-[10px] text-emerald-400 font-medium">Goods received & verified</span>
-          </div>
-        </div>
-
-        <div className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <Building className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-neutral-400 font-medium">Active Key Vendors</div>
-            <div className="text-xl font-bold text-white font-mono mt-0.5">
-              {vendors.length} Partners
-            </div>
-            <span className="text-[10px] text-amber-400 font-medium">Tier-1 certified suppliers</span>
+            <span className="text-[10px] text-emerald-400 font-medium">Accounts: Fully Settled & Closed</span>
           </div>
         </div>
       </div>
@@ -274,10 +341,11 @@ export const ProcurementModule: React.FC = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 rounded-xl bg-neutral-900 border border-neutral-800 text-xs text-white focus:outline-hidden"
               >
-                <option value="ALL">All PO Statuses</option>
-                <option value="Requested">Requested</option>
-                <option value="Ordered">Ordered / In Transit</option>
-                <option value="Delivered">Delivered</option>
+                <option value="ALL">All PO Status Stages</option>
+                <option value="draft">Stage 1: Draft Requisitions</option>
+                <option value="approved">Stage 2: Approved in Accounts</option>
+                <option value="in progress">Stage 3: In Progress / Transit</option>
+                <option value="done">Stage 4: Done (Settled in Accounts)</option>
               </select>
             </div>
           </div>
@@ -301,66 +369,85 @@ export const ProcurementModule: React.FC = () => {
                       <th className="p-4">Order Date</th>
                       <th className="p-4">Delivery Window</th>
                       <th className="p-4">Amount</th>
-                      <th className="p-4">Status</th>
+                      <th className="p-4">Status & Accounts Record</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-neutral-800/60">
-                    {filteredPOs.map((po) => (
-                      <tr key={po.id} className="hover:bg-neutral-900/80 transition-colors">
-                        <td className="p-4 font-mono font-bold text-purple-400">
-                          {po.poNumber}
-                        </td>
-                        <td className="p-4">
-                          <div className="font-semibold text-white">{po.vendorName}</div>
-                          <div className="text-[11px] text-neutral-400">Dept: {po.department} • Req: {po.requestedBy}</div>
-                        </td>
-                        <td className="p-4 font-mono text-neutral-300">
-                          {po.orderDate}
-                        </td>
-                        <td className="p-4">
-                          <div className="font-mono text-xs text-neutral-300">Exp: {po.expectedDelivery}</div>
-                          {po.trackingNumber && (
-                            <div className="text-[10px] text-purple-400 font-mono flex items-center gap-1">
-                              <Truck className="w-3 h-3" /> {po.carrier}: {po.trackingNumber}
+                    {filteredPOs.map((po) => {
+                      const stage = normalizePOStatus(po.status);
+                      return (
+                        <tr key={po.id} className="hover:bg-neutral-900/80 transition-colors">
+                          <td className="p-4 font-mono font-bold text-purple-400">
+                            {po.poNumber}
+                          </td>
+                          <td className="p-4">
+                            <div className="font-semibold text-white">{po.vendorName}</div>
+                            <div className="text-[11px] text-neutral-400">Dept: {po.department} • Req: {po.requestedBy}</div>
+                          </td>
+                          <td className="p-4 font-mono text-neutral-300">
+                            {po.orderDate}
+                          </td>
+                          <td className="p-4">
+                            <div className="font-mono text-xs text-neutral-300">Exp: {po.expectedDelivery}</div>
+                            {po.trackingNumber && (
+                              <div className="text-[10px] text-purple-400 font-mono flex items-center gap-1">
+                                <Truck className="w-3 h-3" /> {po.carrier}: {po.trackingNumber}
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-4 font-mono font-bold text-white">
+                            ${po.totalAmount.toLocaleString()} {po.currency}
+                          </td>
+                          <td className="p-4">
+                            {getStatusBadge(po.status)}
+                          </td>
+                          <td className="p-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              {stage === 'draft' && (
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'approved')}
+                                  className="px-2.5 py-1 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-[11px] font-medium border border-blue-500/30 cursor-pointer"
+                                  title="Approve and record liability in Accounts"
+                                >
+                                  Approve in Accounts
+                                </button>
+                              )}
+                              {stage === 'approved' && (
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'in progress')}
+                                  className="px-2.5 py-1 bg-purple-600/20 text-purple-300 hover:bg-purple-600/30 rounded-lg text-[11px] font-medium border border-purple-500/30 cursor-pointer"
+                                  title="Dispatch to In Progress"
+                                >
+                                  Set In Progress
+                                </button>
+                              )}
+                              {stage === 'in progress' && (
+                                <button
+                                  onClick={() => updatePurchaseOrderStatus(po.id, 'done')}
+                                  className="px-2.5 py-1 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-lg text-[11px] font-medium border border-emerald-500/30 cursor-pointer"
+                                  title="Confirm receipt and mark settled in Accounts"
+                                >
+                                  Confirm Receipt (Done)
+                                </button>
+                              )}
+                              {stage === 'done' && (
+                                <span className="text-[10px] text-emerald-400 font-bold px-2 py-0.5 rounded bg-emerald-950/40 border border-emerald-800/40">
+                                  ✓ Settled in Accounts
+                                </span>
+                              )}
+                              <button
+                                onClick={() => setSelectedPO(po)}
+                                className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 cursor-pointer"
+                                title="View Items"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </button>
                             </div>
-                          )}
-                        </td>
-                        <td className="p-4 font-mono font-bold text-white">
-                          ${po.totalAmount.toLocaleString()} {po.currency}
-                        </td>
-                        <td className="p-4">
-                          {getStatusBadge(po.status)}
-                        </td>
-                        <td className="p-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {po.status === 'Requested' && (
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Ordered')}
-                                className="px-2.5 py-1 bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 rounded-lg text-[11px] font-medium border border-blue-500/30"
-                              >
-                                Dispatch Order
-                              </button>
-                            )}
-                            {po.status === 'Ordered' && (
-                              <button
-                                onClick={() => updatePurchaseOrderStatus(po.id, 'Delivered')}
-                                className="px-2.5 py-1 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30 rounded-lg text-[11px] font-medium border border-emerald-500/30"
-                              >
-                                Confirm Receipt
-                              </button>
-                            )}
-                            <button
-                              onClick={() => setSelectedPO(po)}
-                              className="p-1.5 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
-                              title="View Items"
-                            >
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -518,19 +605,33 @@ export const ProcurementModule: React.FC = () => {
                       const itm = { ...newPO.items[0], unitPrice: amt, total: amt };
                       setNewPO({ ...newPO, totalAmount: amt, items: [itm] });
                     }}
-                    className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
+                    className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-mono font-bold"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-neutral-400 block mb-1">Expected Delivery Date</label>
-                  <input
-                    type="date"
-                    value={newPO.expectedDelivery}
-                    onChange={(e) => setNewPO({ ...newPO, expectedDelivery: e.target.value })}
-                    className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
-                  />
+                  <label className="text-neutral-400 block mb-1">PO Status Stage</label>
+                  <select
+                    value={newPO.status}
+                    onChange={(e) => setNewPO({ ...newPO, status: e.target.value as PurchaseOrderStatus })}
+                    className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white font-semibold"
+                  >
+                    <option value="draft">Stage 1: Draft (Uncommitted)</option>
+                    <option value="approved">Stage 2: Approved (Committed in Accounts)</option>
+                    <option value="in progress">Stage 3: In Progress (Transit)</option>
+                    <option value="done">Stage 4: Done (Settled in Accounts)</option>
+                  </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="text-neutral-400 block mb-1">Expected Delivery Date</label>
+                <input
+                  type="date"
+                  value={newPO.expectedDelivery}
+                  onChange={(e) => setNewPO({ ...newPO, expectedDelivery: e.target.value })}
+                  className="w-full p-2.5 rounded-xl bg-neutral-950 border border-neutral-800 text-white"
+                />
               </div>
 
               <div>

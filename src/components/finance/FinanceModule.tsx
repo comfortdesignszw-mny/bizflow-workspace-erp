@@ -14,7 +14,11 @@ import {
   Eye,
   Printer,
   X,
-  CreditCard
+  CreditCard,
+  Wrench,
+  Truck,
+  FileCheck,
+  ArrowDownRight
 } from 'lucide-react';
 import { ExpenseClaim, Invoice } from '../../types/erp';
 import { EmptyState } from '../common/EmptyState';
@@ -24,6 +28,8 @@ export const FinanceModule: React.FC = () => {
     expenses,
     invoices,
     employees,
+    engineeringJobCards,
+    purchaseOrders,
     addExpense,
     updateExpenseStatus,
     addInvoice,
@@ -33,7 +39,7 @@ export const FinanceModule: React.FC = () => {
     currentUser
   } = useERP();
 
-  const [activeTab, setActiveTab] = useState<'invoices' | 'expenses'>('invoices');
+  const [activeTab, setActiveTab] = useState<'invoices' | 'expenses' | 'accounts-deductions'>('invoices');
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false);
   const [isAddInvoiceOpen, setIsAddInvoiceOpen] = useState(false);
 
@@ -71,6 +77,32 @@ export const FinanceModule: React.FC = () => {
   const totalInvoiced = invoices.reduce((s, i) => s + i.totalAmount, 0);
   const totalPaidInvoices = invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + i.totalAmount, 0);
   const totalExpenses = expenses.filter(e => e.status === 'Approved').reduce((s, e) => s + e.amount, 0);
+
+  // Job Cards Deduction sync calculations
+  const approvedJobCards = engineeringJobCards.filter(
+    j => j.status === 'approved' || j.status === 'in progress' || j.status === 'done'
+  );
+  const totalJobCardDeductions = approvedJobCards.reduce(
+    (sum, j) => sum + (j.approvedExpense || j.estimatedExpense || 0),
+    0
+  );
+
+  // Purchase Order Stages Accounts records
+  const poDraftTotal = purchaseOrders
+    .filter(po => po.status === 'draft' || po.status === 'Requested')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const poApprovedTotal = purchaseOrders
+    .filter(po => po.status === 'approved' || po.status === 'Approved')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const poInProgressTotal = purchaseOrders
+    .filter(po => po.status === 'in progress' || po.status === 'Ordered')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
+
+  const poDoneTotal = purchaseOrders
+    .filter(po => po.status === 'done' || po.status === 'Delivered')
+    .reduce((sum, po) => sum + po.totalAmount, 0);
 
   const handleCreateExpense = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +160,7 @@ export const FinanceModule: React.FC = () => {
       </div>
 
       {/* KPI Financial Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
           <span className="text-xs text-neutral-400 font-medium">Total Billed Revenue</span>
           <p className="text-2xl font-black text-white font-mono mt-1">${totalInvoiced.toLocaleString()}</p>
@@ -140,17 +172,22 @@ export const FinanceModule: React.FC = () => {
           <span className="text-[11px] text-neutral-500">Paid and settled invoices</span>
         </div>
         <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
-          <span className="text-xs text-amber-400 font-medium">Approved Reimbursements</span>
-          <p className="text-2xl font-black text-amber-400 font-mono mt-1">${totalExpenses.toLocaleString()}</p>
-          <span className="text-[11px] text-neutral-500">Employee expense claims</span>
+          <span className="text-xs text-amber-400 font-medium">Approved Outlays & Deductions</span>
+          <p className="text-2xl font-black text-amber-400 font-mono mt-1">${(totalExpenses + totalJobCardDeductions).toLocaleString()}</p>
+          <span className="text-[11px] text-neutral-500">Includes Job Card deductions</span>
+        </div>
+        <div className="p-4 rounded-2xl bg-neutral-900 border border-neutral-800">
+          <span className="text-xs text-purple-400 font-medium">PO Accounts Commitments</span>
+          <p className="text-2xl font-black text-purple-400 font-mono mt-1">${(poApprovedTotal + poInProgressTotal).toLocaleString()}</p>
+          <span className="text-[11px] text-neutral-500">Approved & In Transit POs</span>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-neutral-800 space-x-4">
+      <div className="flex border-b border-neutral-800 space-x-4 overflow-x-auto">
         <button
           onClick={() => setActiveTab('invoices')}
-          className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+          className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'invoices' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'
           }`}
         >
@@ -160,12 +197,22 @@ export const FinanceModule: React.FC = () => {
 
         <button
           onClick={() => setActiveTab('expenses')}
-          className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer ${
+          className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap ${
             activeTab === 'expenses' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'
           }`}
         >
           <Receipt className="w-4 h-4" />
           <span>Employee Expense Claims ({expenses.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('accounts-deductions')}
+          className={`pb-3 text-xs font-semibold border-b-2 flex items-center gap-2 transition-colors cursor-pointer whitespace-nowrap ${
+            activeTab === 'accounts-deductions' ? 'border-emerald-500 text-emerald-400' : 'border-transparent text-neutral-400 hover:text-neutral-200'
+          }`}
+        >
+          <ArrowDownRight className="w-4 h-4 text-cyan-400" />
+          <span>Accounts & Deductions Ledger ({approvedJobCards.length + purchaseOrders.length})</span>
         </button>
       </div>
 
@@ -287,8 +334,15 @@ export const FinanceModule: React.FC = () => {
                       {exp.category}
                     </td>
                     <td className="py-3.5 px-4 font-sans text-neutral-300">
-                      <span className="font-semibold text-white block">{exp.merchant}</span>
-                      <span className="text-[11px] text-neutral-400">{exp.description}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-white">{exp.merchant}</span>
+                        {exp.description.includes('Job Card') && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            Job Card Deduction
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-neutral-400 block">{exp.description}</span>
                     </td>
                     <td className="py-3.5 px-3 font-bold text-white">
                       ${exp.amount.toLocaleString()}
@@ -332,7 +386,208 @@ export const FinanceModule: React.FC = () => {
         )
       )}
 
-      {/* Submit Expense Modal */}
+      {/* Tab 3: Accounts Deductions & Purchase Orders Sync */}
+      {activeTab === 'accounts-deductions' && (
+        <div className="space-y-6">
+          {/* Section 1: Engineering Job Card Deductions */}
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Engineering Job Card Expense Deductions</h3>
+                  <p className="text-xs text-neutral-400">
+                    Automatic fiscal deduction records synched from approved and executed Engineering sub-department job cards.
+                  </p>
+                </div>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-neutral-950 border border-neutral-800 text-xs font-mono">
+                <span className="text-neutral-400">Total Deducted: </span>
+                <span className="text-amber-400 font-bold font-mono">
+                  ${totalJobCardDeductions.toLocaleString()}
+                </span>
+              </div>
+            </div>
+
+            {approvedJobCards.length === 0 ? (
+              <div className="p-8 text-center rounded-xl bg-neutral-950/60 border border-neutral-800/80 space-y-2">
+                <Wrench className="w-8 h-8 text-neutral-600 mx-auto" />
+                <p className="text-sm font-semibold text-neutral-300">No Job Card Deductions Synched Yet</p>
+                <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                  When a job card in any Engineering sub-department (Mechanical, Electrical, etc.) is approved, a corresponding deduction record is automatically posted and debited here.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-neutral-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[10px] border-b border-neutral-800">
+                    <tr>
+                      <th className="py-3 px-4">Job Card #</th>
+                      <th className="py-3 px-4">Sub-Department</th>
+                      <th className="py-3 px-4">Job Title & Details</th>
+                      <th className="py-3 px-3">Lead Engineer</th>
+                      <th className="py-3 px-3">Job Status</th>
+                      <th className="py-3 px-3 text-right">Deduction Amount</th>
+                      <th className="py-3 px-4 text-right">Accounts Ledger Record</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60 font-mono">
+                    {approvedJobCards.map((jc) => {
+                      const deductionAmount = jc.approvedExpense || jc.estimatedExpense || 0;
+                      return (
+                        <tr key={jc.id} className="hover:bg-neutral-800/30 transition-colors">
+                          <td className="py-3.5 px-4 font-bold text-cyan-400">
+                            {jc.jobCardNumber}
+                          </td>
+                          <td className="py-3.5 px-4 font-sans font-medium text-white">
+                            <span className="px-2 py-0.5 rounded text-[10px] bg-neutral-800 border border-neutral-700 text-neutral-300">
+                              {jc.subDepartment}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-sans text-neutral-300">
+                            <span className="font-semibold text-white block">{jc.title}</span>
+                            <span className="text-[11px] text-neutral-400 line-clamp-1">{jc.description}</span>
+                          </td>
+                          <td className="py-3.5 px-3 font-sans text-neutral-300">
+                            {jc.assignedToName || 'Assigned Lead'}
+                          </td>
+                          <td className="py-3.5 px-3 font-sans">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                              jc.status === 'done' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                              jc.status === 'in progress' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
+                              'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                            }`}>
+                              {jc.status.toUpperCase()}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-right font-bold text-amber-400">
+                            -${deductionAmount.toLocaleString()}
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-sans">
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded">
+                              <CheckCircle2 className="w-3 h-3" /> Debited from Engineering CapEx
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Purchase Orders Stages & Accounts Spend Records */}
+          <div className="rounded-2xl bg-neutral-900 border border-neutral-800 p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  <FileCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Purchase Orders Ledger by Accounts Stages</h3>
+                  <p className="text-xs text-neutral-400">
+                    4-stage procurement lifecycle records with real-time financial spend and liability commitments in Accounts.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Status Stage Financial Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800">
+                <div className="text-[11px] text-amber-400 font-semibold">Stage 1: Draft</div>
+                <div className="text-lg font-bold text-white font-mono mt-0.5">
+                  ${poDraftTotal.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-1">Accounts: Uncommitted Allocation</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800">
+                <div className="text-[11px] text-blue-400 font-semibold">Stage 2: Approved</div>
+                <div className="text-lg font-bold text-blue-400 font-mono mt-0.5">
+                  ${poApprovedTotal.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-1">Accounts: Committed Liability</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800">
+                <div className="text-[11px] text-purple-400 font-semibold">Stage 3: In Progress</div>
+                <div className="text-lg font-bold text-purple-300 font-mono mt-0.5">
+                  ${poInProgressTotal.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-1">Accounts: Active Fulfillment Outlay</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-neutral-950 border border-neutral-800">
+                <div className="text-[11px] text-emerald-400 font-semibold">Stage 4: Done</div>
+                <div className="text-lg font-bold text-emerald-400 font-mono mt-0.5">
+                  ${poDoneTotal.toLocaleString()}
+                </div>
+                <div className="text-[10px] text-neutral-400 mt-1">Accounts: Fully Settled & Closed</div>
+              </div>
+            </div>
+
+            {/* PO Summary Table */}
+            {purchaseOrders.length === 0 ? (
+              <div className="p-6 text-center rounded-xl bg-neutral-950/60 border border-neutral-800 text-neutral-500 text-xs">
+                No purchase orders recorded. Create purchase requisitions in the Procurement department to track Accounts liabilities.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-neutral-800">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[10px] border-b border-neutral-800">
+                    <tr>
+                      <th className="py-3 px-4">PO #</th>
+                      <th className="py-3 px-4">Vendor</th>
+                      <th className="py-3 px-3">Department</th>
+                      <th className="py-3 px-3">Order Amount</th>
+                      <th className="py-3 px-3">PO Status Stage</th>
+                      <th className="py-3 px-4 text-right">Accounts Liability Record</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-800/60 font-mono">
+                    {purchaseOrders.map((po) => {
+                      const st = po.status.toLowerCase();
+                      const isDraft = st === 'draft' || st === 'requested';
+                      const isApproved = st === 'approved';
+                      const isInProgress = st === 'in progress' || st === 'ordered';
+                      const isDone = st === 'done' || st === 'delivered';
+
+                      return (
+                        <tr key={po.id} className="hover:bg-neutral-800/30 transition-colors">
+                          <td className="py-3 px-4 font-bold text-purple-400">{po.poNumber}</td>
+                          <td className="py-3 px-4 font-sans text-white">{po.vendorName}</td>
+                          <td className="py-3 px-3 font-sans text-neutral-400">{po.department}</td>
+                          <td className="py-3 px-3 font-bold text-white">${po.totalAmount.toLocaleString()}</td>
+                          <td className="py-3 px-3 font-sans">
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
+                              isDraft ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                              isApproved ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                              isInProgress ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                              'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            }`}>
+                              {isDraft ? 'Draft' : isApproved ? 'Approved' : isInProgress ? 'In Progress' : 'Done'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-right font-sans">
+                            {isDraft && <span className="text-neutral-400 text-[11px]">Uncommitted (Pending Approval)</span>}
+                            {isApproved && <span className="text-blue-400 font-semibold text-[11px]">Committed Liability in Accounts</span>}
+                            {isInProgress && <span className="text-purple-300 font-semibold text-[11px]">Active Inbound Outlay</span>}
+                            {isDone && <span className="text-emerald-400 font-bold text-[11px]">✓ Settled & Reconciled</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {isAddExpenseOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 overflow-y-auto">
           <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-700 text-white rounded-2xl shadow-2xl p-6 space-y-4 text-xs">

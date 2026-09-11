@@ -41,7 +41,11 @@ import {
   ITSoftwareLicense,
   Vehicle,
   Driver,
-  TripLog
+  TripLog,
+  EngineeringJobCard,
+  EngineeringSubDepartment,
+  JobCardStatus,
+  JobCardPriority
 } from '../types/erp';
 import {
   INITIAL_PERSONAS,
@@ -72,7 +76,8 @@ import {
   INITIAL_IT_LICENSES,
   INITIAL_VEHICLES,
   INITIAL_DRIVERS,
-  INITIAL_TRIP_LOGS
+  INITIAL_TRIP_LOGS,
+  INITIAL_ENGINEERING_JOB_CARDS
 } from '../data/initialData';
 import {
   UserAccount,
@@ -158,6 +163,7 @@ interface ERPContextType {
   vehicles: Vehicle[];
   drivers: Driver[];
   tripLogs: TripLog[];
+  engineeringJobCards: EngineeringJobCard[];
 
   // Computed & Live presence
   currentlyInsideEmployees: Employee[];
@@ -259,6 +265,10 @@ interface ERPContextType {
   // Actions: Engineering & DevOps
   addMicroservice: (svc: Omit<Microservice, 'id'>) => Microservice;
   triggerPipelineDeploy: (pipeline: Omit<DeployPipeline, 'id' | 'timestamp'>) => DeployPipeline;
+  addEngineeringJobCard: (card: Omit<EngineeringJobCard, 'id' | 'jobCode' | 'raisedAt'> & { jobCode?: string }) => EngineeringJobCard;
+  updateEngineeringJobCard: (id: string, updates: Partial<EngineeringJobCard>) => void;
+  updateEngineeringJobCardStatus: (id: string, status: JobCardStatus) => void;
+  deleteEngineeringJobCard: (id: string) => void;
 
   // Actions: Notes & Text Pad
   addNote: (note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>) => WorkplaceNote;
@@ -390,6 +400,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [vehicles, setVehicles] = useState<Vehicle[]>(() => getLocalSandbox('vehicles', INITIAL_VEHICLES));
   const [drivers, setDrivers] = useState<Driver[]>(() => getLocalSandbox('drivers', INITIAL_DRIVERS));
   const [tripLogs, setTripLogs] = useState<TripLog[]>(() => getLocalSandbox('trip_logs', INITIAL_TRIP_LOGS));
+  const [engineeringJobCards, setEngineeringJobCards] = useState<EngineeringJobCard[]>(() => getLocalSandbox('engineering_job_cards', INITIAL_ENGINEERING_JOB_CARDS));
 
   const [procurementTab, setProcurementTab] = useState<'orders' | 'vendors' | 'logistics' | 'fleet'>('orders');
 
@@ -615,7 +626,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           lics,
           vehs,
           drvs,
-          trips
+          trips,
+          engJobCards
         ] = await Promise.all([
           loadCollectionOfflineFirst('employees', db.employees, INITIAL_EMPLOYEES),
           loadCollectionOfflineFirst('access_logs', db.accessLogs, INITIAL_ACCESS_LOGS),
@@ -642,7 +654,8 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loadCollectionOfflineFirst('it_licenses', db.itLicenses, INITIAL_IT_LICENSES),
           loadCollectionOfflineFirst('vehicles', db.vehicles, INITIAL_VEHICLES),
           loadCollectionOfflineFirst('drivers', db.drivers, INITIAL_DRIVERS),
-          loadCollectionOfflineFirst('trip_logs', db.tripLogs, INITIAL_TRIP_LOGS)
+          loadCollectionOfflineFirst('trip_logs', db.tripLogs, INITIAL_TRIP_LOGS),
+          loadCollectionOfflineFirst('engineering_job_cards', db.engineeringJobCards, INITIAL_ENGINEERING_JOB_CARDS)
         ]);
 
         const DEMO_NAMES = new Set([
@@ -728,6 +741,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (vehs && vehs.length) setVehicles(vehs);
         if (drvs && drvs.length) setDrivers(drvs);
         if (trips && trips.length) setTripLogs(trips);
+        if (engJobCards && engJobCards.length) setEngineeringJobCards(engJobCards);
 
         const activeSession = authService.getSession();
         if (activeSession) {
@@ -2335,6 +2349,110 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return newPipe;
   }, [logAudit]);
 
+  // Engineering Sub-Departments & Job Cards
+  const addEngineeringJobCard = useCallback((cardData: Omit<EngineeringJobCard, 'id' | 'jobCode' | 'raisedAt'> & { jobCode?: string }): EngineeringJobCard => {
+    const deptPrefix = cardData.department ? cardData.department.slice(0, 4).toUpperCase().replace(/[^A-Z]/g, '') : 'ENG';
+    const count = engineeringJobCards.length + 1;
+    const jobCode = cardData.jobCode || `JC-${deptPrefix}-${String(count).padStart(3, '0')}`;
+    const now = new Date().toISOString();
+    
+    let syncedExpenseId: string | undefined = undefined;
+    const cost = cardData.approvedCost || cardData.estimatedCost || 0;
+
+    // If raised with 'approved' status and cost > 0, sync to Finance deduction
+    if (cardData.status === 'approved' && cost > 0) {
+      const exp = addExpense({
+        employeeId: currentUser.id || 'eng-lead',
+        employeeName: cardData.assignedTo || currentUser.name,
+        department: `Engineering - ${cardData.department}`,
+        category: 'Hardware',
+        amount: cost,
+        currency: 'USD',
+        description: `Job Card [${jobCode}] Approved Expense: ${cardData.jobName} (${cardData.department})`,
+        merchant: `Engineering (${cardData.department})`
+      });
+      updateExpenseStatus(exp.id, 'Approved');
+      syncedExpenseId = exp.id;
+    }
+
+    const newCard: EngineeringJobCard = {
+      ...cardData,
+      id: `jc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      jobCode,
+      raisedAt: now,
+      syncedToFinanceExpenseId: syncedExpenseId
+    };
+
+    setEngineeringJobCards(prev => [newCard, ...prev]);
+    setLocalSandbox('engineering_job_cards', [newCard, ...engineeringJobCards]);
+    db.engineeringJobCards.put(newCard).catch(err => console.warn(err));
+
+    logAudit('JOB_CARD_CREATED', 'Engineering & Sub-Departments', `Created job card ${newCard.jobCode}: ${newCard.jobName} [${newCard.department}] - Priority: ${newCard.priority.toUpperCase()}${syncedExpenseId ? ' (Expense Synced to Accounts)' : ''}.`);
+    return newCard;
+  }, [engineeringJobCards, addExpense, updateExpenseStatus, currentUser, logAudit]);
+
+  const updateEngineeringJobCard = useCallback((id: string, updates: Partial<EngineeringJobCard>) => {
+    setEngineeringJobCards(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const updated = { ...c, ...updates };
+      const cost = updated.approvedCost || updated.estimatedCost || 0;
+      if (updated.status === 'approved' && !updated.syncedToFinanceExpenseId && cost > 0) {
+        const exp = addExpense({
+          employeeId: currentUser.id || 'eng-lead',
+          employeeName: updated.assignedTo || currentUser.name,
+          department: `Engineering - ${updated.department}`,
+          category: 'Hardware',
+          amount: cost,
+          currency: 'USD',
+          description: `Job Card [${updated.jobCode}] Approved Expense: ${updated.jobName} (${updated.department})`,
+          merchant: `Engineering (${updated.department})`
+        });
+        updateExpenseStatus(exp.id, 'Approved');
+        updated.syncedToFinanceExpenseId = exp.id;
+      }
+      db.engineeringJobCards.put(updated).catch(err => console.warn(err));
+      return updated;
+    }));
+    logAudit('JOB_CARD_UPDATED', 'Engineering & Sub-Departments', `Updated engineering job card #${id}.`);
+  }, [addExpense, updateExpenseStatus, currentUser, logAudit]);
+
+  const updateEngineeringJobCardStatus = useCallback((id: string, status: JobCardStatus) => {
+    setEngineeringJobCards(prev => prev.map(c => {
+      if (c.id !== id) return c;
+      const updated: EngineeringJobCard = { 
+        ...c, 
+        status,
+        approvedAt: status === 'approved' ? (c.approvedAt || new Date().toISOString()) : c.approvedAt,
+        approvedBy: status === 'approved' ? (c.approvedBy || currentUser.name) : c.approvedBy,
+        completedAt: status === 'done' ? (c.completedAt || new Date().toISOString()) : c.completedAt
+      };
+      const cost = updated.approvedCost || updated.estimatedCost || 0;
+      if (status === 'approved' && !updated.syncedToFinanceExpenseId && cost > 0) {
+        const exp = addExpense({
+          employeeId: currentUser.id || 'eng-lead',
+          employeeName: updated.assignedTo || currentUser.name,
+          department: `Engineering - ${updated.department}`,
+          category: 'Hardware',
+          amount: cost,
+          currency: 'USD',
+          description: `Job Card [${updated.jobCode}] Approved Expense: ${updated.jobName} (${updated.department})`,
+          merchant: `Engineering (${updated.department})`
+        });
+        updateExpenseStatus(exp.id, 'Approved');
+        updated.syncedToFinanceExpenseId = exp.id;
+      }
+      db.engineeringJobCards.put(updated).catch(err => console.warn(err));
+      return updated;
+    }));
+    logAudit('JOB_CARD_STATUS_CHANGED', 'Engineering & Sub-Departments', `Job card #${id} status changed to ${status.toUpperCase()}.`);
+  }, [addExpense, updateExpenseStatus, currentUser.name, logAudit]);
+
+  const deleteEngineeringJobCard = useCallback((id: string) => {
+    setEngineeringJobCards(prev => prev.filter(c => c.id !== id));
+    db.engineeringJobCards.delete(id).catch(err => console.warn(err));
+    logAudit('JOB_CARD_DELETED', 'Engineering & Sub-Departments', `Deleted job card #${id}.`, 'WARNING');
+  }, [logAudit]);
+
   // Workplace Notes
   const addNote = useCallback((note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>): WorkplaceNote => {
     const newNote: WorkplaceNote = {
@@ -2521,6 +2639,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setVehicles([]);
     setDrivers([]);
     setTripLogs([]);
+    setEngineeringJobCards([]);
     
     // Set active admin user (preserve current authenticated user or fallback admin)
     const activeAdmin: UserPersona = userAccount ? {
@@ -2667,6 +2786,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     vehicles,
     drivers,
     tripLogs,
+    engineeringJobCards,
     currentlyInsideEmployees,
     currentlyInsideCount,
     todayPresentCount,
@@ -2727,6 +2847,10 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addClientAccount,
     addMicroservice,
     triggerPipelineDeploy,
+    addEngineeringJobCard,
+    updateEngineeringJobCard,
+    updateEngineeringJobCardStatus,
+    deleteEngineeringJobCard,
     addNote,
     updateNote,
     deleteNote,
