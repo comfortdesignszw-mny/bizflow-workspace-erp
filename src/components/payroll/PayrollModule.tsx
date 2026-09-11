@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { PayrollRun, PayslipItem, PayrollStatus, AllowanceItem, DeductionItem } from '../../types/erp';
 import { exportPayrollRunPDF, exportIndividualPayslipPDF } from '../../utils/pdfExport';
+import { EmptyState } from '../common/EmptyState';
 
 export const PayrollModule: React.FC = () => {
   const {
@@ -375,8 +376,16 @@ export const PayrollModule: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="lg:col-span-3 p-8 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-500 text-xs italic">
-            Select a payroll run from the left panel or generate a new cycle.
+          <div className="lg:col-span-3 flex items-center justify-center p-8 rounded-2xl bg-neutral-900 border border-neutral-800">
+            <EmptyState
+              icon={Banknote}
+              title="No Payroll Run Selected"
+              description="Select a payroll run from the cycle logs on the left or generate a new payroll cycle."
+              actionText="+ Generate Draft Run"
+              onAction={() => setIsGenerateModalOpen(true)}
+              secondaryActionText="Create Individual Payslip"
+              onSecondaryAction={() => setIsIndividualModalOpen(true)}
+            />
           </div>
         )}
       </div>
@@ -529,7 +538,7 @@ export const PayrollModule: React.FC = () => {
                 >
                   {employees.map(emp => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.code} — {emp.firstName} {emp.lastName} ({emp.department} • {emp.position}) — Base: ${emp.baseSalary.toLocaleString()}
+                      {emp.code} — {emp.firstName} {emp.lastName} ({emp.department} • {emp.position}) — Base: ${(emp.salary || 0).toLocaleString()}
                     </option>
                   ))}
                 </select>

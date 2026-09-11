@@ -74,6 +74,7 @@ export interface Employee {
   physicalAddress?: string; // Physical residential address
   joinDate: string; // Aliased to dateOfEngagement
   baseSalary: number;
+  salary?: number;
   hourlyRate: number;
   currency: string;
   shiftStart: string; // "08:30"
@@ -84,6 +85,8 @@ export interface Employee {
   bankDetails: BankDetails;
   configuredEarnings?: EmployeeEarningConfig[];
   configuredDeductions?: EmployeeDeductionConfig[];
+  biometricEnrolled?: boolean;
+  nfcCardId?: string;
   notes?: string;
 }
 

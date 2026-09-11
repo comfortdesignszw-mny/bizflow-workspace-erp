@@ -45,6 +45,7 @@ import {
 } from '../types/erp';
 import {
   INITIAL_PERSONAS,
+  DEFAULT_FALLBACK_PERSONA,
   INITIAL_EMPLOYEES,
   INITIAL_ACCESS_LOGS,
   INITIAL_ATTENDANCE_ROLLUPS,
@@ -76,6 +77,7 @@ import {
 import {
   UserAccount,
   DepartmentPermission,
+  SignUpAccountType,
 } from '../types/auth';
 import { authService } from '../db/authDexieService';
 import { db } from '../db/erpDexieDb';
@@ -110,14 +112,19 @@ interface ERPContextType {
   allUserAccounts: UserAccount[];
   isAuthenticated: boolean;
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
-  registerWithEmail: (name: string, email: string, pass: string, dept?: string) => Promise<{ success: boolean; error?: string }>;
-  loginWithGoogle: (profile: { email: string; name: string; avatar?: string }) => Promise<{ success: boolean; error?: string }>;
+  registerWithEmail: (name: string, email: string, pass: string, dept?: string, accountType?: SignUpAccountType) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (profile: { email: string; name: string; avatar?: string }, dept?: string, accountType?: SignUpAccountType) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  promoteToAdmin: (userId: string) => Promise<{ success: boolean; error?: string }>;
+  promoteToDepartmentHead: (userId: string, department: string) => Promise<{ success: boolean; error?: string }>;
+  demoteToEmployee: (userId: string, department?: string) => Promise<{ success: boolean; error?: string }>;
   updateUserPermissions: (userId: string, updates: any) => Promise<{ success: boolean; error?: string }>;
   deleteUserAccount: (userId: string) => Promise<{ success: boolean; error?: string }>;
   hasPermission: (permissionKey: keyof DepartmentPermission, department?: string) => boolean;
   isPermissionsModalOpen: boolean;
   setIsPermissionsModalOpen: (open: boolean) => void;
+  editingUserIdForPermissions: string | null;
+  setEditingUserIdForPermissions: (id: string | null) => void;
 
   // Active module navigation
   activeModule: string;
@@ -247,6 +254,11 @@ interface ERPContextType {
   // Actions: Sales & CRM
   addDeal: (deal: Omit<Deal, 'id' | 'lastActivity'>) => Deal;
   updateDealStage: (id: string, stage: DealStage) => void;
+  addClientAccount: (acc: Omit<ClientAccount, 'id'>) => ClientAccount;
+
+  // Actions: Engineering & DevOps
+  addMicroservice: (svc: Omit<Microservice, 'id'>) => Microservice;
+  triggerPipelineDeploy: (pipeline: Omit<DeployPipeline, 'id' | 'timestamp'>) => DeployPipeline;
 
   // Actions: Notes & Text Pad
   addNote: (note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>) => WorkplaceNote;
@@ -330,6 +342,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [userAccount, setUserAccount] = useState<UserAccount | null>(() => authService.getSession());
   const [allUserAccounts, setAllUserAccounts] = useState<UserAccount[]>([]);
   const [isPermissionsModalOpen, setIsPermissionsModalOpen] = useState(false);
+  const [editingUserIdForPermissions, setEditingUserIdForPermissions] = useState<string | null>(null);
 
   const [currentUser, setCurrentUser] = useState<UserPersona>(() => {
     const session = authService.getSession();
@@ -345,7 +358,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         employeeId: session.id
       };
     }
-    return getLocalSandbox('user', INITIAL_PERSONAS[0]);
+    return getLocalSandbox('user', DEFAULT_FALLBACK_PERSONA);
   });
   const [activeModule, setActiveModule] = useState<string>('dashboard');
 
@@ -530,6 +543,52 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     async function hydrateFromIndexedDB() {
       try {
+        const PURGE_FLAG_KEY = 'bizflow_demo_data_purged_v5';
+        if (typeof window !== 'undefined' && localStorage.getItem(PURGE_FLAG_KEY) !== 'true') {
+          try {
+            await Promise.all([
+              db.accessLogs.clear(),
+              db.attendanceRollups.clear(),
+              db.payrollRuns.clear(),
+              db.jobOpenings.clear(),
+              db.applicants.clear(),
+              db.projects.clear(),
+              db.tasks.clear(),
+              db.assets.clear(),
+              db.expenses.clear(),
+              db.invoices.clear(),
+              db.vendors.clear(),
+              db.purchaseOrders.clear(),
+              db.microservices.clear(),
+              db.deployPipelines.clear(),
+              db.clientAccounts.clear(),
+              db.deals.clear(),
+              db.notes.clear(),
+              db.itTickets.clear(),
+              db.itSystems.clear(),
+              db.itDevices.clear(),
+              db.itLicenses.clear(),
+              db.vehicles.clear(),
+              db.drivers.clear(),
+              db.tripLogs.clear()
+            ]);
+            const demoKeys = [
+              'bizflow_erp_access_logs', 'bizflow_erp_attendance_rollups', 'bizflow_erp_payroll_runs',
+              'bizflow_erp_job_openings', 'bizflow_erp_applicants', 'bizflow_erp_projects',
+              'bizflow_erp_tasks', 'bizflow_erp_assets', 'bizflow_erp_expenses', 'bizflow_erp_invoices',
+              'bizflow_erp_vendors', 'bizflow_erp_purchase_orders', 'bizflow_erp_microservices',
+              'bizflow_erp_deploy_pipelines', 'bizflow_erp_client_accounts', 'bizflow_erp_deals',
+              'bizflow_erp_notes', 'bizflow_erp_it_tickets', 'bizflow_erp_it_systems',
+              'bizflow_erp_it_devices', 'bizflow_erp_it_licenses', 'bizflow_erp_vehicles',
+              'bizflow_erp_drivers', 'bizflow_erp_trip_logs'
+            ];
+            demoKeys.forEach(k => localStorage.removeItem(k));
+            localStorage.setItem(PURGE_FLAG_KEY, 'true');
+          } catch (cleanErr) {
+            console.warn('[Demo Purge]', cleanErr);
+          }
+        }
+
         const [
           emp,
           accLogs,
@@ -586,7 +645,64 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loadCollectionOfflineFirst('trip_logs', db.tripLogs, INITIAL_TRIP_LOGS)
         ]);
 
-        if (emp && emp.length) setEmployees(emp);
+        const DEMO_NAMES = new Set([
+          'Eleanor Vance', 'Marcus Chen', 'Sophia Patel', 'David Alvarez',
+          'Amara Okafor', 'Elena Rostova', 'Liam O\'Connor', 'Maya Lin',
+          'Carlos Mendez', 'Priya Sharma', 'Jordan Blake', 'Chloe Bennett'
+        ]);
+
+        let cleanEmps = (emp || []).filter(e => !e.id.startsWith('emp-00') && !DEMO_NAMES.has(e.firstName + ' ' + e.lastName));
+
+        // Hydrate accounts & auth session
+        const storedAccounts = await authService.getAccounts();
+        setAllUserAccounts(storedAccounts);
+
+        // Ensure all registered accounts exist in the employee list
+        for (const acc of storedAccounts) {
+          const exists = cleanEmps.some(e => e.id === acc.id || e.email.toLowerCase() === acc.email.toLowerCase());
+          if (!exists) {
+            const newStaff: Employee = {
+              id: acc.id,
+              code: `EMP-${acc.id.slice(-4).toUpperCase()}`,
+              firstName: acc.name.split(' ')[0] || acc.name,
+              lastName: acc.name.split(' ').slice(1).join(' ') || '',
+              email: acc.email,
+              phone: '+1 (555) 000-0000',
+              department: acc.department || 'General',
+              position: acc.roleTitle || (acc.role === 'ADMIN' ? 'System Administrator' : acc.role === 'DEPARTMENT_HEAD' ? 'Department Head' : 'Staff Member'),
+              employmentType: 'Full-time',
+              status: 'Active',
+              baseSalary: 85000,
+              salary: 85000,
+              hourlyRate: 45,
+              currency: 'USD',
+              shiftStart: '08:30',
+              shiftEnd: '17:30',
+              address: 'Enterprise HQ',
+              nationalId: 'ID-VERIFIED',
+              emergencyContact: {
+                name: 'Next of Kin',
+                relationship: 'Family',
+                phone: '+1 (555) 000-0000'
+              },
+              bankDetails: {
+                bankName: 'Corporate Federal',
+                accountNumber: '****7721',
+                accountName: acc.name
+              },
+              joinDate: acc.createdAt ? acc.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+              avatar: acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(acc.name)}`,
+              biometricEnrolled: true,
+              nfcCardId: `NFC-${acc.id.slice(-6).toUpperCase()}`
+            };
+            cleanEmps.unshift(newStaff);
+            db.employees.put(newStaff).catch(err => console.warn(err));
+          }
+        }
+
+        setEmployees(cleanEmps);
+        setLocalSandbox('employees', cleanEmps);
+
         if (accLogs && accLogs.length) setAccessLogs(accLogs);
         if (attRollups && attRollups.length) setAttendanceRollups(attRollups);
         if (payRuns && payRuns.length) setPayrollRuns(payRuns);
@@ -613,9 +729,6 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (drvs && drvs.length) setDrivers(drvs);
         if (trips && trips.length) setTripLogs(trips);
 
-        // Hydrate accounts & auth session
-        const storedAccounts = await authService.getAccounts();
-        setAllUserAccounts(storedAccounts);
         const activeSession = authService.getSession();
         if (activeSession) {
           setUserAccount(activeSession);
@@ -752,6 +865,64 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return true;
   }, [currentUser.role, userAccount]);
 
+  const syncAccountToStaff = useCallback((account: UserAccount) => {
+    setEmployees(prev => {
+      const existingIdx = prev.findIndex(e => e.id === account.id || e.email.toLowerCase() === account.email.toLowerCase());
+      const staffRecord: Employee = {
+        id: account.id,
+        code: `EMP-${account.id.slice(-4).toUpperCase()}`,
+        firstName: account.name.split(' ')[0] || account.name,
+        lastName: account.name.split(' ').slice(1).join(' ') || '',
+        email: account.email,
+        phone: '+1 (555) 000-0000',
+        department: account.department || 'General',
+        position: account.roleTitle || (account.role === 'ADMIN' ? 'System Administrator' : account.role === 'DEPARTMENT_HEAD' ? 'Department Head' : 'Staff Member'),
+        employmentType: 'Full-time',
+        status: 'Active',
+        baseSalary: 85000,
+        salary: 85000,
+        hourlyRate: 45,
+        currency: 'USD',
+        shiftStart: '08:30',
+        shiftEnd: '17:30',
+        address: 'Enterprise HQ',
+        nationalId: 'ID-VERIFIED',
+        emergencyContact: {
+          name: 'Next of Kin',
+          relationship: 'Family',
+          phone: '+1 (555) 000-0000'
+        },
+        bankDetails: {
+          bankName: 'Corporate Federal',
+          accountNumber: '****7721',
+          accountName: account.name
+        },
+        joinDate: account.createdAt ? account.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        avatar: account.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(account.name)}`,
+        biometricEnrolled: true,
+        nfcCardId: `NFC-${account.id.slice(-6).toUpperCase()}`
+      };
+
+      let updatedList: Employee[];
+      if (existingIdx >= 0) {
+        updatedList = [...prev];
+        updatedList[existingIdx] = {
+          ...updatedList[existingIdx],
+          firstName: staffRecord.firstName,
+          lastName: staffRecord.lastName,
+          department: staffRecord.department,
+          position: staffRecord.position,
+          avatar: staffRecord.avatar
+        };
+      } else {
+        updatedList = [staffRecord, ...prev];
+      }
+      setLocalSandbox('employees', updatedList);
+      db.employees.put(updatedList.find(e => e.id === account.id) || staffRecord).catch(err => console.warn(err));
+      return updatedList;
+    });
+  }, []);
+
   const loginWithEmail = useCallback(async (email: string, pass: string) => {
     const res = await authService.login(email, pass);
     if (res.success && res.user) {
@@ -766,16 +937,23 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         department: res.user.department,
         employeeId: res.user.id
       });
+      syncAccountToStaff(res.user);
       const updatedAccounts = await authService.getAccounts();
       setAllUserAccounts(updatedAccounts);
       logAudit('USER_LOGIN', 'Authentication', `User ${res.user.name} (${res.user.email}) signed in as ${res.user.role}.`);
       return { success: true };
     }
     return { success: false, error: res.error };
-  }, [logAudit]);
+  }, [logAudit, syncAccountToStaff]);
 
-  const registerWithEmail = useCallback(async (name: string, email: string, pass: string, dept: string = 'Executive Leadership') => {
-    const res = await authService.register(name, email, pass, dept);
+  const registerWithEmail = useCallback(async (
+    name: string,
+    email: string,
+    pass: string,
+    dept: string = 'Engineering',
+    accountType: SignUpAccountType = 'EMPLOYEE'
+  ) => {
+    const res = await authService.register(name, email, pass, dept, accountType);
     if (res.success && res.user) {
       setUserAccount(res.user);
       setCurrentUser({
@@ -788,16 +966,21 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         department: res.user.department,
         employeeId: res.user.id
       });
+      syncAccountToStaff(res.user);
       const updatedAccounts = await authService.getAccounts();
       setAllUserAccounts(updatedAccounts);
-      logAudit('USER_REGISTERED', 'Authentication', `Account created for ${res.user.name} (${res.user.email}) as ${res.user.role}.`);
+      logAudit('USER_REGISTERED', 'Authentication', `Account created for ${res.user.name} (${res.user.email}) as ${res.user.roleTitle} (${res.user.department}).`);
       return { success: true };
     }
     return { success: false, error: res.error };
-  }, [logAudit]);
+  }, [logAudit, syncAccountToStaff]);
 
-  const loginWithGoogle = useCallback(async (profile: { email: string; name: string; avatar?: string }) => {
-    const res = await authService.loginWithGoogle(profile);
+  const loginWithGoogle = useCallback(async (
+    profile: { email: string; name: string; avatar?: string },
+    dept: string = 'Engineering',
+    accountType: SignUpAccountType = 'EMPLOYEE'
+  ) => {
+    const res = await authService.loginWithGoogle(profile, dept, accountType);
     if (res.success && res.user) {
       setUserAccount(res.user);
       setCurrentUser({
@@ -810,13 +993,14 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         department: res.user.department,
         employeeId: res.user.id
       });
+      syncAccountToStaff(res.user);
       const updatedAccounts = await authService.getAccounts();
       setAllUserAccounts(updatedAccounts);
-      logAudit('GOOGLE_AUTH', 'Authentication', `User ${res.user.name} authenticated via Google as ${res.user.role}.`);
+      logAudit('GOOGLE_AUTH', 'Authentication', `User ${res.user.name} authenticated via Google as ${res.user.roleTitle}.`);
       return { success: true };
     }
     return { success: false, error: 'Google sign-in could not be completed.' };
-  }, [logAudit]);
+  }, [logAudit, syncAccountToStaff]);
 
   const logout = useCallback(() => {
     authService.logout();
@@ -824,9 +1008,73 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('USER_LOGOUT', 'Authentication', `User ${currentUser.name} signed out.`);
   }, [currentUser.name, logAudit]);
 
+  const promoteToAdmin = useCallback(async (userId: string) => {
+    const res = await authService.promoteToAdmin(userId);
+    if (res.success && res.user) {
+      syncAccountToStaff(res.user);
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      if (userAccount && userAccount.id === userId) {
+        setUserAccount(res.user);
+        setCurrentUser(prev => ({
+          ...prev,
+          role: res.user!.role,
+          roleTitle: res.user!.roleTitle,
+          department: res.user!.department
+        }));
+      }
+      logAudit('ROLE_PROMOTION', 'RBAC & Authorization', `User ${res.user.name} (${res.user.email}) was elevated to Super Administrator.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [userAccount, logAudit, syncAccountToStaff]);
+
+  const promoteToDepartmentHead = useCallback(async (userId: string, department: string) => {
+    const res = await authService.promoteToDepartmentHead(userId, department);
+    if (res.success && res.user) {
+      syncAccountToStaff(res.user);
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      if (userAccount && userAccount.id === userId) {
+        setUserAccount(res.user);
+        setCurrentUser(prev => ({
+          ...prev,
+          role: res.user!.role,
+          roleTitle: res.user!.roleTitle,
+          department: res.user!.department
+        }));
+      }
+      logAudit('ROLE_PROMOTION', 'RBAC & Authorization', `User ${res.user.name} (${res.user.email}) designated as Head of ${department}.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [userAccount, logAudit, syncAccountToStaff]);
+
+  const demoteToEmployee = useCallback(async (userId: string, department?: string) => {
+    const res = await authService.demoteToEmployee(userId, department);
+    if (res.success && res.user) {
+      syncAccountToStaff(res.user);
+      const updatedAccounts = await authService.getAccounts();
+      setAllUserAccounts(updatedAccounts);
+      if (userAccount && userAccount.id === userId) {
+        setUserAccount(res.user);
+        setCurrentUser(prev => ({
+          ...prev,
+          role: res.user!.role,
+          roleTitle: res.user!.roleTitle,
+          department: res.user!.department
+        }));
+      }
+      logAudit('ROLE_CHANGED', 'RBAC & Authorization', `User ${res.user.name} reassigned to Department Employee.`);
+      return { success: true };
+    }
+    return { success: false, error: res.error };
+  }, [userAccount, logAudit, syncAccountToStaff]);
+
   const updateUserPermissions = useCallback(async (userId: string, updates: any) => {
     const res = await authService.updateUserPermissions(userId, updates);
     if (res.success && res.user) {
+      syncAccountToStaff(res.user);
       const updatedAccounts = await authService.getAccounts();
       setAllUserAccounts(updatedAccounts);
       if (userAccount && userAccount.id === userId) {
@@ -846,11 +1094,17 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: true };
     }
     return { success: false, error: res.error };
-  }, [userAccount, logAudit]);
+  }, [userAccount, logAudit, syncAccountToStaff]);
 
   const deleteUserAccount = useCallback(async (userId: string) => {
     const res = await authService.deleteAccount(userId);
     if (res.success) {
+      setEmployees(prev => {
+        const next = prev.filter(e => e.id !== userId);
+        setLocalSandbox('employees', next);
+        db.employees.delete(userId).catch(err => console.warn(err));
+        return next;
+      });
       const updatedAccounts = await authService.getAccounts();
       setAllUserAccounts(updatedAccounts);
       logAudit('ACCOUNT_DELETED', 'RBAC & Authorization', `User account ${userId} deleted.`);
@@ -2049,6 +2303,38 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     logAudit('CRM_STAGE_ADVANCED', 'Sales & CRM', `Deal #${id} moved to ${stage} stage.`);
   }, [logAudit]);
 
+  const addClientAccount = useCallback((acc: Omit<ClientAccount, 'id'>): ClientAccount => {
+    const newAcc: ClientAccount = {
+      ...acc,
+      id: `acc-${Date.now()}`
+    };
+    setClientAccounts(prev => [newAcc, ...prev]);
+    logAudit('CLIENT_ACCOUNT_CREATED', 'Sales & CRM', `Created client account "${newAcc.name}".`);
+    return newAcc;
+  }, [logAudit]);
+
+  // Engineering & DevOps
+  const addMicroservice = useCallback((svc: Omit<Microservice, 'id'>): Microservice => {
+    const newSvc: Microservice = {
+      ...svc,
+      id: `ms-${Date.now()}`
+    };
+    setMicroservices(prev => [newSvc, ...prev]);
+    logAudit('SERVICE_REGISTERED', 'Engineering', `Registered microservice "${newSvc.name}" (${newSvc.code}).`);
+    return newSvc;
+  }, [logAudit]);
+
+  const triggerPipelineDeploy = useCallback((pipeline: Omit<DeployPipeline, 'id' | 'timestamp'>): DeployPipeline => {
+    const newPipe: DeployPipeline = {
+      ...pipeline,
+      id: `pipe-${Date.now()}`,
+      timestamp: new Date().toISOString()
+    };
+    setDeployPipelines(prev => [newPipe, ...prev]);
+    logAudit('DEPLOY_TRIGGERED', 'Engineering', `Triggered deployment for ${newPipe.serviceName} on ${newPipe.branch}.`);
+    return newPipe;
+  }, [logAudit]);
+
   // Workplace Notes
   const addNote = useCallback((note: Omit<WorkplaceNote, 'id' | 'createdAt' | 'updatedAt'>): WorkplaceNote => {
     const newNote: WorkplaceNote = {
@@ -2236,8 +2522,56 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setDrivers([]);
     setTripLogs([]);
     
-    // Set user to Admin (Comfort)
-    setCurrentUser(INITIAL_PERSONAS[0]);
+    // Set active admin user (preserve current authenticated user or fallback admin)
+    const activeAdmin: UserPersona = userAccount ? {
+      id: userAccount.id,
+      name: userAccount.name,
+      email: userAccount.email,
+      role: userAccount.role,
+      roleTitle: userAccount.roleTitle,
+      avatar: userAccount.avatar,
+      department: userAccount.department,
+      employeeId: userAccount.id
+    } : DEFAULT_FALLBACK_PERSONA;
+    setCurrentUser(activeAdmin);
+
+    // Keep authenticated accounts in staff roster
+    const realStaff: Employee[] = allUserAccounts.map(acc => ({
+      id: acc.id,
+      code: `EMP-${acc.id.slice(-4).toUpperCase()}`,
+      firstName: acc.name.split(' ')[0] || acc.name,
+      lastName: acc.name.split(' ').slice(1).join(' ') || '',
+      email: acc.email,
+      phone: '+1 (555) 000-0000',
+      department: acc.department || 'General',
+      position: acc.roleTitle || (acc.role === 'ADMIN' ? 'System Administrator' : acc.role === 'DEPARTMENT_HEAD' ? 'Department Head' : 'Staff Member'),
+      employmentType: 'Full-time',
+      status: 'Active',
+      baseSalary: 85000,
+      salary: 85000,
+      hourlyRate: 45,
+      currency: 'USD',
+      shiftStart: '08:30',
+      shiftEnd: '17:30',
+      address: 'Enterprise HQ',
+      nationalId: 'ID-VERIFIED',
+      emergencyContact: {
+        name: 'Next of Kin',
+        relationship: 'Family',
+        phone: '+1 (555) 000-0000'
+      },
+      bankDetails: {
+        bankName: 'Corporate Federal',
+        accountNumber: '****7721',
+        accountName: acc.name
+      },
+      joinDate: acc.createdAt ? acc.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+      avatar: acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(acc.name)}`,
+      biometricEnrolled: true,
+      nfcCardId: `NFC-${acc.id.slice(-6).toUpperCase()}`
+    }));
+    setEmployees(realStaff);
+    setLocalSandbox('employees', realStaff);
 
     // Clear Dexie and LocalStorage and trigger remote clean
     const res = await cleanDatabaseStorage();
@@ -2245,18 +2579,34 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cleanLog: AuditLog = {
       id: `aud-${Date.now()}`,
       timestamp: new Date().toISOString(),
-      userId: INITIAL_PERSONAS[0].id,
-      userName: INITIAL_PERSONAS[0].name,
+      userId: activeAdmin.id,
+      userName: activeAdmin.name,
       role: 'ADMIN',
       action: 'PRODUCTION_DB_INITIALIZED',
       module: 'System Admin',
-      details: 'Production database cleaned and initialized. Admin user active with 0 demo records.',
+      details: `Production database wiped of sample data. ${realStaff.length} authenticated accounts preserved with 0 demo transactions.`,
       status: 'SUCCESS'
     };
     setAuditLogs([cleanLog]);
 
     return { success: res.success };
-  }, []);
+  }, [allUserAccounts, userAccount]);
+
+  const availablePersonas: UserPersona[] = useMemo(() => {
+    if (allUserAccounts.length > 0) {
+      return allUserAccounts.map(acc => ({
+        id: acc.id,
+        name: acc.name,
+        email: acc.email,
+        role: acc.role,
+        roleTitle: acc.roleTitle,
+        avatar: acc.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(acc.name)}`,
+        department: acc.department,
+        employeeId: acc.id
+      }));
+    }
+    return currentUser && currentUser.email ? [currentUser] : [];
+  }, [allUserAccounts, currentUser]);
 
   const value = {
     isOnline,
@@ -2269,7 +2619,7 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     offlineStorageEngine: 'Dexie.JS IndexedDB (Sandbox-First)',
     currentUser,
     setCurrentUser,
-    availablePersonas: INITIAL_PERSONAS,
+    availablePersonas,
     hasRole,
     userAccount,
     allUserAccounts,
@@ -2278,11 +2628,16 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     registerWithEmail,
     loginWithGoogle,
     logout,
+    promoteToAdmin,
+    promoteToDepartmentHead,
+    demoteToEmployee,
     updateUserPermissions,
     deleteUserAccount,
     hasPermission,
     isPermissionsModalOpen,
     setIsPermissionsModalOpen,
+    editingUserIdForPermissions,
+    setEditingUserIdForPermissions,
     activeModule,
     setActiveModule,
     employees,
@@ -2369,6 +2724,9 @@ export const ERPProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     deleteTripLog,
     addDeal,
     updateDealStage,
+    addClientAccount,
+    addMicroservice,
+    triggerPipelineDeploy,
     addNote,
     updateNote,
     deleteNote,

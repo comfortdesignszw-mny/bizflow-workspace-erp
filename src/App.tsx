@@ -35,6 +35,8 @@ const ERPAppContent: React.FC = () => {
     isAuthenticated,
     isPermissionsModalOpen,
     setIsPermissionsModalOpen,
+    editingUserIdForPermissions,
+    setEditingUserIdForPermissions,
   } = useERP();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -129,7 +131,11 @@ const ERPAppContent: React.FC = () => {
       <PWAInstallBanner />
       <DepartmentPermissionsModal
         isOpen={isPermissionsModalOpen}
-        onClose={() => setIsPermissionsModalOpen(false)}
+        onClose={() => {
+          setIsPermissionsModalOpen(false);
+          setEditingUserIdForPermissions(null);
+        }}
+        initialUserId={editingUserIdForPermissions || undefined}
       />
     </div>
   );

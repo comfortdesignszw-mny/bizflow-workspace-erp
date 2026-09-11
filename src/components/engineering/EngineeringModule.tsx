@@ -20,11 +20,14 @@ import {
   Workflow
 } from 'lucide-react';
 import { Microservice, DeployPipeline } from '../../types/erp';
+import { EmptyState } from '../common/EmptyState';
 
 export const EngineeringModule: React.FC = () => {
   const {
     microservices,
     deployPipelines,
+    addMicroservice,
+    triggerPipelineDeploy,
     currentUser,
     settings
   } = useERP();
@@ -153,106 +156,150 @@ export const EngineeringModule: React.FC = () => {
 
       {/* TAB 1: MICROSERVICES */}
       {activeTab === 'services' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {microservices.map((svc) => (
-            <div
-              key={svc.id}
-              className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4 hover:border-cyan-500/40 transition-all cursor-pointer"
-              onClick={() => setSelectedService(svc)}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-mono text-cyan-400 font-bold">{svc.code}</span>
-                    <span className="text-[10px] font-mono text-neutral-400">({svc.version})</span>
+        microservices.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+            <EmptyState
+              icon={Server}
+              title="No Microservices Registered"
+              description="Register microservice clusters, gateway endpoints, and background worker topologies to monitor real-time uptime, latency, and deployments."
+              actionText="+ Register Service"
+              onAction={() => addMicroservice({
+                name: 'Identity & Access Gateway',
+                code: 'SRV-AUTH',
+                status: 'Healthy',
+                uptimePercent: 99.98,
+                latencyMs: 24,
+                version: 'v2.4.0',
+                techStack: ['Go', 'gRPC', 'Redis'],
+                leadEngineer: currentUser.name,
+                repository: 'github.com/enterprise/auth-gateway',
+                lastDeployed: new Date().toISOString().split('T')[0]
+              })}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {microservices.map((svc) => (
+              <div
+                key={svc.id}
+                className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4 hover:border-cyan-500/40 transition-all cursor-pointer"
+                onClick={() => setSelectedService(svc)}
+              >
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-cyan-400 font-bold">{svc.code}</span>
+                      <span className="text-[10px] font-mono text-neutral-400">({svc.version})</span>
+                    </div>
+                    <h3 className="text-base font-bold text-white mt-1">{svc.name}</h3>
+                    <p className="text-xs text-neutral-400 font-mono mt-0.5">{svc.repository}</p>
                   </div>
-                  <h3 className="text-base font-bold text-white mt-1">{svc.name}</h3>
-                  <p className="text-xs text-neutral-400 font-mono mt-0.5">{svc.repository}</p>
-                </div>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> {svc.status}
-                </span>
-              </div>
-
-              {/* Metrics */}
-              <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/80 text-center font-mono">
-                <div>
-                  <div className="text-[10px] text-neutral-500 uppercase">Uptime</div>
-                  <div className="text-xs font-bold text-emerald-400 mt-0.5">{svc.uptimePercent}%</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-neutral-500 uppercase">Latency</div>
-                  <div className="text-xs font-bold text-white mt-0.5">{svc.latencyMs} ms</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-neutral-500 uppercase">Lead Eng</div>
-                  <div className="text-xs font-bold text-cyan-300 mt-0.5 truncate">{(svc.leadEngineer || 'Lead').split(' ')[0]}</div>
-                </div>
-              </div>
-
-              {/* Tech stack badges */}
-              <div className="flex flex-wrap gap-1.5 pt-1">
-                {svc.techStack.map((tech, idx) => (
-                  <span key={idx} className="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-300 border border-neutral-700">
-                    {tech}
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {svc.status}
                   </span>
-                ))}
+                </div>
+
+                {/* Metrics */}
+                <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-neutral-950/80 border border-neutral-800/80 text-center font-mono">
+                  <div>
+                    <div className="text-[10px] text-neutral-500 uppercase">Uptime</div>
+                    <div className="text-xs font-bold text-emerald-400 mt-0.5">{svc.uptimePercent}%</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-neutral-500 uppercase">Latency</div>
+                    <div className="text-xs font-bold text-white mt-0.5">{svc.latencyMs} ms</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-neutral-500 uppercase">Lead Eng</div>
+                    <div className="text-xs font-bold text-cyan-300 mt-0.5 truncate">{(svc.leadEngineer || 'Lead').split(' ')[0]}</div>
+                  </div>
+                </div>
+
+                {/* Tech stack badges */}
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {svc.techStack.map((tech, idx) => (
+                    <span key={idx} className="px-2 py-0.5 rounded text-[10px] font-mono bg-neutral-800 text-neutral-300 border border-neutral-700">
+                      {tech}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* TAB 2: CI/CD PIPELINES */}
       {activeTab === 'pipelines' && (
-        <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[11px] border-b border-neutral-800">
-                <tr>
-                  <th className="p-4">Target Service</th>
-                  <th className="p-4">Branch & Commit</th>
-                  <th className="p-4">Commit Message</th>
-                  <th className="p-4">Author</th>
-                  <th className="p-4">Duration</th>
-                  <th className="p-4">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-800/60">
-                {deployPipelines.map((pipe) => (
-                  <tr key={pipe.id} className="hover:bg-neutral-900/80 transition-colors">
-                    <td className="p-4 font-bold text-white">
-                      {pipe.serviceName}
-                    </td>
-                    <td className="p-4 font-mono">
-                      <div className="flex items-center gap-1.5 text-cyan-400">
-                        <GitBranch className="w-3.5 h-3.5" />
-                        <span>{pipe.branch}</span>
-                      </div>
-                      <div className="text-[10px] text-neutral-500 flex items-center gap-1 mt-0.5">
-                        <GitCommit className="w-3 h-3" /> {pipe.commitHash}
-                      </div>
-                    </td>
-                    <td className="p-4 text-neutral-300 font-mono text-[11px] max-w-xs truncate">
-                      {pipe.commitMessage}
-                    </td>
-                    <td className="p-4 text-neutral-300">
-                      {pipe.author}
-                    </td>
-                    <td className="p-4 font-mono text-neutral-400">
-                      {pipe.durationSeconds}s
-                    </td>
-                    <td className="p-4">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
-                        <CheckCircle2 className="w-3 h-3" /> {pipe.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        deployPipelines.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+            <EmptyState
+              icon={GitBranch}
+              title="No Deployment Runs"
+              description="Trigger CI/CD deployment pipelines to automate container builds, automated unit tests, and production cluster rollout."
+              actionText="+ Run Deployment Pipeline"
+              onAction={() => triggerPipelineDeploy({
+                serviceId: microservices[0]?.id || 'srv-core',
+                serviceName: microservices[0]?.name || 'Core System Ingress',
+                branch: 'main',
+                commitHash: Math.random().toString(16).slice(2, 9),
+                commitMessage: 'feat: initialize automated deployment pipeline',
+                author: currentUser.name,
+                status: 'SUCCESS',
+                durationSeconds: 45
+              })}
+            />
           </div>
-        </div>
+        ) : (
+          <div className="rounded-2xl border border-neutral-800 bg-neutral-900/60 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-950/80 text-neutral-400 uppercase tracking-wider font-mono text-[11px] border-b border-neutral-800">
+                  <tr>
+                    <th className="p-4">Target Service</th>
+                    <th className="p-4">Branch & Commit</th>
+                    <th className="p-4">Commit Message</th>
+                    <th className="p-4">Author</th>
+                    <th className="p-4">Duration</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800/60">
+                  {deployPipelines.map((pipe) => (
+                    <tr key={pipe.id} className="hover:bg-neutral-900/80 transition-colors">
+                      <td className="p-4 font-bold text-white">
+                        {pipe.serviceName}
+                      </td>
+                      <td className="p-4 font-mono">
+                        <div className="flex items-center gap-1.5 text-cyan-400">
+                          <GitBranch className="w-3.5 h-3.5" />
+                          <span>{pipe.branch}</span>
+                        </div>
+                        <div className="text-[10px] text-neutral-500 flex items-center gap-1 mt-0.5">
+                          <GitCommit className="w-3 h-3" /> {pipe.commitHash}
+                        </div>
+                      </td>
+                      <td className="p-4 text-neutral-300 font-mono text-[11px] max-w-xs truncate">
+                        {pipe.commitMessage}
+                      </td>
+                      <td className="p-4 text-neutral-300">
+                        {pipe.author}
+                      </td>
+                      <td className="p-4 font-mono text-neutral-400">
+                        {pipe.durationSeconds}s
+                      </td>
+                      <td className="p-4">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 w-fit">
+                          <CheckCircle2 className="w-3 h-3" /> {pipe.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       )}
 
       {/* TAB 3: ARCHITECTURE & TECH STACK */}

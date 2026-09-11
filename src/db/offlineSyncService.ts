@@ -1,6 +1,7 @@
 import { db } from './erpDexieDb';
 import {
   INITIAL_PERSONAS,
+  DEFAULT_FALLBACK_PERSONA,
   INITIAL_EMPLOYEES,
   INITIAL_ACCESS_LOGS,
   INITIAL_ATTENDANCE_ROLLUPS,
@@ -259,7 +260,7 @@ export async function cleanDatabaseStorage(): Promise<{ success: boolean; messag
     }
 
     // 3. Set Admin User
-    const adminPersona = INITIAL_PERSONAS[0];
+    const adminPersona = INITIAL_PERSONAS[0] || DEFAULT_FALLBACK_PERSONA;
     setLocalSandbox('user', adminPersona);
 
     // 4. Trigger remote API datastore purge if online

@@ -648,22 +648,22 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
 
   // POST Clean / Reset Production Database API
   app.post('/api/db/clean', (req, res) => {
+    // Preserve authenticated users if any exist
+    const preservedUsers = onlineDatastore['users'] || [];
+    const preservedUser = req.body?.user || (onlineDatastore['user'] && onlineDatastore['user'][0]) || null;
+
     // Clear all datastore tables
     for (const key of Object.keys(onlineDatastore)) {
       onlineDatastore[key] = [];
     }
 
-    // Initialize clean foundational state with user as Admin
-    onlineDatastore['user'] = [{
-      id: 'user-admin',
-      name: 'Comfort (System Admin)',
-      email: 'comfort.designszw@gmail.com',
-      role: 'ADMIN',
-      roleTitle: 'Principal Executive & Global System Administrator',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-      department: 'Executive Board',
-      employeeId: 'emp-001'
-    }];
+    // Restore authenticated user accounts
+    if (preservedUsers.length > 0) {
+      onlineDatastore['users'] = preservedUsers;
+    }
+    if (preservedUser) {
+      onlineDatastore['user'] = [preservedUser];
+    }
 
     onlineDatastore['employees'] = [];
     onlineDatastore['access_logs'] = [];
@@ -695,7 +695,7 @@ Provide a comprehensive, high-level JSON response analyzing productivity trends,
     res.json({
       success: true,
       message: 'Stateless datastore successfully purged and initialized for production',
-      adminUser: 'comfort.designszw@gmail.com',
+      adminUser: preservedUser?.email || (preservedUsers[0]?.email ?? 'none'),
       nodeId: NODE_ID,
       cleanedAt: new Date().toISOString()
     });

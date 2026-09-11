@@ -70,6 +70,32 @@ export const DEFAULT_EMPLOYEE_PERMISSIONS: DepartmentPermission = {
   departmentScoped: true,
 };
 
+export const APP_DEPARTMENTS = [
+  'Engineering',
+  'IT Systems',
+  'Finance & Accounts',
+  'Human Resources',
+  'Procurement & Fleet',
+  'Sales & Business Dev',
+  'Operations & Logistics',
+  'Executive Leadership'
+] as const;
+
+export type AppDepartment = (typeof APP_DEPARTMENTS)[number];
+
+export type SignUpAccountType = 'EMPLOYEE' | 'DEPARTMENT_HEAD';
+
+export interface ReturningUserProfile {
+  email: string;
+  name: string;
+  avatar: string;
+  role: UserRole;
+  roleTitle: string;
+  department: string;
+  authProvider: 'email' | 'google';
+  lastSeenAt: string;
+}
+
 export interface UserAccount {
   id: string;
   email: string;

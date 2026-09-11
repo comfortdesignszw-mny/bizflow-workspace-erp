@@ -8,14 +8,18 @@ import {
   Eye,
   EyeOff,
   ArrowRight,
-  CheckCircle2,
   AlertCircle,
-  Sparkles,
   KeyRound,
-  Fingerprint
+  Fingerprint,
+  Crown,
+  Briefcase,
+  UserCheck,
+  RotateCcw
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
 import { ResilientAppIcon } from '../common/ResilientAppIcon';
+import { APP_DEPARTMENTS, SignUpAccountType, ReturningUserProfile } from '../../types/auth';
+import { authService } from '../../db/authDexieService';
 
 interface AuthPortalProps {
   onSuccess?: () => void;
@@ -33,23 +37,33 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [department, setDepartment] = useState('Executive Leadership');
+  const [accountType, setAccountType] = useState<SignUpAccountType>('EMPLOYEE');
+  const [department, setDepartment] = useState<string>('Engineering');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [googleModalOpen, setGoogleModalOpen] = useState(false);
-  const [googleEmail, setGoogleEmail] = useState('comfort.designszw@gmail.com');
-  const [googleName, setGoogleName] = useState('Comfort (Administrator)');
+  const [googleEmail, setGoogleEmail] = useState('');
+  const [googleName, setGoogleName] = useState('');
+  const [googleAccountType, setGoogleAccountType] = useState<SignUpAccountType>('EMPLOYEE');
+  const [googleDepartment, setGoogleDepartment] = useState<string>('Engineering');
+
+  // Returning user detection
+  const [returningUser, setReturningUser] = useState<ReturningUserProfile | null>(null);
 
   const isFirstUser = allUserAccounts.length === 0 || !allUserAccounts.some(a => a.role === 'ADMIN');
 
   useEffect(() => {
-    // If no accounts registered yet, default to register view or prefill helpful admin email
-    if (isFirstUser) {
-      if (!email) setEmail('comfort.designszw@gmail.com');
-      if (!name) setName('Comfort');
+    // Detect returning user from device memory or Dexie/localStorage
+    const lastUser = authService.getLastReturningUser();
+    if (lastUser) {
+      setReturningUser(lastUser);
+      // Pre-populate email for returning user convenience
+      if (!email) {
+        setEmail(lastUser.email);
+      }
     }
-  }, [isFirstUser]);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,25 +78,41 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           return;
         }
         if (!email.trim() || !email.includes('@')) {
-          setError('Please enter a valid email address.');
+          setError('Please enter a valid work email address.');
+          setLoading(false);
+          return;
+        }
+        if (!password || !password.trim()) {
+          setError('Password is required to create an account.');
           setLoading(false);
           return;
         }
         if (password.length < 6) {
-          setError('Password must be at least 6 characters.');
+          setError('Password must be at least 6 characters long.');
           setLoading(false);
           return;
         }
 
-        const res = await registerWithEmail(name, email, password, department);
+        const res = await registerWithEmail(
+          name,
+          email,
+          password,
+          department,
+          isFirstUser ? 'EMPLOYEE' : accountType
+        );
         if (!res.success) {
           setError(res.error || 'Failed to create account.');
         } else {
           if (onSuccess) onSuccess();
         }
       } else {
-        if (!email.trim() || !password) {
-          setError('Please provide both email and password.');
+        if (!email.trim()) {
+          setError('Please provide your registered email address.');
+          setLoading(false);
+          return;
+        }
+        if (!password || !password.trim()) {
+          setError('Password is required to sign in.');
           setLoading(false);
           return;
         }
@@ -102,14 +132,22 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
   };
 
   const handleGoogleSignIn = async (userEmail: string, userName: string) => {
+    if (!userEmail.trim()) {
+      setError('Please provide a valid Google Account email.');
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      const res = await loginWithGoogle({
-        email: userEmail,
-        name: userName,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`
-      });
+      const res = await loginWithGoogle(
+        {
+          email: userEmail,
+          name: userName || userEmail.split('@')[0],
+          avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName || userEmail)}`
+        },
+        googleDepartment,
+        isFirstUser ? 'EMPLOYEE' : googleAccountType
+      );
       if (!res.success) {
         setError(res.error || 'Google authentication failed.');
       } else {
@@ -121,6 +159,13 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleClearReturningUser = () => {
+    authService.clearReturningUser();
+    setReturningUser(null);
+    setEmail('');
+    setPassword('');
   };
 
   return (
@@ -145,15 +190,33 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           </p>
         </div>
 
-        {/* First User Notice Banner */}
-        {isFirstUser && (
-          <div className="mb-5 bg-amber-950/40 border border-amber-500/40 rounded-xl p-3 flex items-start gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-200">
-              <span className="font-semibold text-amber-300">Initial System Setup: </span>
-              The first account to sign in or register will automatically be elevated to{' '}
-              <span className="font-semibold text-white">Super Administrator</span> with master system authority.
+        {/* Returning User Detected Card */}
+        {returningUser && mode === 'login' && (
+          <div className="mb-5 bg-blue-950/40 border border-blue-500/40 rounded-xl p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <img
+                src={returningUser.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(returningUser.name)}`}
+                alt={returningUser.name}
+                className="w-9 h-9 rounded-full bg-neutral-800 border border-blue-400 shrink-0"
+              />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-white truncate">Welcome back, {returningUser.name}</span>
+                  <span className="text-[9px] px-1.5 py-0.2 bg-blue-900/80 text-blue-300 font-semibold rounded">
+                    {returningUser.role === 'ADMIN' ? 'Admin' : returningUser.role === 'DEPARTMENT_HEAD' ? 'Dept Head' : 'Employee'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-neutral-400 truncate">{returningUser.email}</p>
+              </div>
             </div>
+            <button
+              type="button"
+              onClick={handleClearReturningUser}
+              title="Switch account / Sign in as someone else"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
 
@@ -185,13 +248,22 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           </button>
         </div>
 
-        {/* Google One-Click Button */}
+        {/* Google One-Click Button (Automatic sign-in, no password required) */}
         <button
           type="button"
           id="btn-google-auth"
-          onClick={() => setGoogleModalOpen(true)}
+          onClick={() => {
+            if (returningUser && returningUser.authProvider === 'google') {
+              setGoogleEmail(returningUser.email);
+              setGoogleName(returningUser.name);
+            } else {
+              setGoogleEmail('user@company.com');
+              setGoogleName('Team Member');
+            }
+            setGoogleModalOpen(true);
+          }}
           disabled={loading}
-          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs sm:text-sm rounded-xl transition-colors shadow-sm mb-4 disabled:opacity-50"
+          className="w-full flex items-center justify-center gap-3 py-2.5 px-4 bg-white hover:bg-neutral-100 text-neutral-900 font-semibold text-xs sm:text-sm rounded-xl transition-colors shadow-sm mb-4 disabled:opacity-50 cursor-pointer"
         >
           {/* Official Google Vector Logo */}
           <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -219,7 +291,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
         <div className="flex items-center my-4">
           <div className="flex-1 border-t border-neutral-800" />
           <span className="px-3 text-[11px] uppercase tracking-wider text-neutral-500 font-medium">
-            or with email
+            or with work email &amp; password
           </span>
           <div className="flex-1 border-t border-neutral-800" />
         </div>
@@ -232,12 +304,12 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Credentials Form */}
+        {/* Credentials Form (Password strictly required) */}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'register' && (
             <div>
               <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                Full Name
+                Full Name <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
@@ -246,7 +318,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
                   id="auth-name-input"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Comfort D."
+                  placeholder="e.g. Sarah Jenkins"
                   required
                   className="w-full bg-neutral-950/80 border border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm placeholder-neutral-600 outline-none transition-colors"
                 />
@@ -256,7 +328,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
 
           <div>
             <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-              Work Email Address
+              Work Email Address <span className="text-red-400">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
@@ -275,11 +347,11 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           <div>
             <div className="flex justify-between items-center mb-1.5">
               <label className="text-xs font-medium text-neutral-300">
-                Password
+                Password <span className="text-red-400">*</span>
               </label>
               {mode === 'login' && (
-                <span className="text-[11px] text-neutral-500 hover:text-blue-400 cursor-pointer">
-                  Forgot password?
+                <span className="text-[11px] text-neutral-500">
+                  Password required
                 </span>
               )}
             </div>
@@ -290,41 +362,96 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
                 id="auth-password-input"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder={mode === 'register' ? 'Minimum 6 characters' : 'Enter account password'}
                 required
                 className="w-full bg-neutral-950/80 border border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white rounded-xl pl-9 pr-10 py-2 text-xs sm:text-sm placeholder-neutral-600 outline-none transition-colors"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-300 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {mode === 'register' && (
-            <div>
-              <label className="block text-xs font-medium text-neutral-300 mb-1.5">
-                Primary Department
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500" />
-                <select
-                  id="auth-dept-select"
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  className="w-full bg-neutral-950/80 border border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm outline-none transition-colors"
-                >
-                  <option value="Executive Leadership">Executive Leadership</option>
-                  <option value="Engineering">Engineering (Mechanical, Electrical, Automation)</option>
-                  <option value="IT Systems">IT Systems &amp; Infrastructure</option>
-                  <option value="Finance & Accounts">Finance &amp; Accounts</option>
-                  <option value="Human Resources">Human Resources</option>
-                  <option value="Procurement & Fleet">Procurement &amp; Fleet Operations</option>
-                  <option value="Sales & Business Dev">Sales &amp; Business Development</option>
-                </select>
+          {/* Account Type & Department Selection (Required for users registering after initial admin) */}
+          {mode === 'register' && !isFirstUser && (
+            <div className="space-y-3 pt-1 border-t border-neutral-800/80">
+              <div>
+                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
+                  Account Type <span className="text-red-400">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('DEPARTMENT_HEAD')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all cursor-pointer ${
+                      accountType === 'DEPARTMENT_HEAD'
+                        ? 'bg-purple-950/60 border-purple-500 text-white ring-1 ring-purple-500'
+                        : 'bg-neutral-950/50 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Crown className={`w-3.5 h-3.5 ${accountType === 'DEPARTMENT_HEAD' ? 'text-purple-400' : 'text-neutral-500'}`} />
+                      <span className="text-xs font-bold">Head of Dept</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 leading-tight">
+                      Lead &amp; oversee department
+                    </span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('EMPLOYEE')}
+                    className={`p-2.5 rounded-xl border text-left flex flex-col transition-all cursor-pointer ${
+                      accountType === 'EMPLOYEE'
+                        ? 'bg-blue-950/60 border-blue-500 text-white ring-1 ring-blue-500'
+                        : 'bg-neutral-950/50 border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <Briefcase className={`w-3.5 h-3.5 ${accountType === 'EMPLOYEE' ? 'text-blue-400' : 'text-neutral-500'}`} />
+                      <span className="text-xs font-bold">Employee</span>
+                    </div>
+                    <span className="text-[10px] text-neutral-400 leading-tight">
+                      Staff team member
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
+                  Assigned Department <span className="text-red-400">*</span>
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 pointer-events-none" />
+                  <select
+                    id="auth-dept-select"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    className="w-full bg-neutral-950/80 border border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-white rounded-xl pl-9 pr-3 py-2 text-xs sm:text-sm outline-none transition-colors cursor-pointer"
+                  >
+                    {APP_DEPARTMENTS.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Helpful role summary preview */}
+                <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-neutral-950/70 border border-neutral-800/80 text-[11px] text-neutral-300 flex items-center gap-2">
+                  <UserCheck className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                  <span>
+                    Role preview:{' '}
+                    <strong className="text-white">
+                      {accountType === 'DEPARTMENT_HEAD' ? `Head of ${department}` : `${department} Specialist (Employee)`}
+                    </strong>
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -333,7 +460,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
             type="submit"
             id="btn-auth-submit"
             disabled={loading}
-            className="w-full mt-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm rounded-xl transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full mt-2 py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm rounded-xl transition-colors shadow-lg shadow-blue-600/20 flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {loading ? (
               <span>Authenticating...</span>
@@ -359,7 +486,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
           </div>
           <div className="flex items-center gap-1.5">
             <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-            <span>Offline Synced DEXIE</span>
+            <span>IndexedDB Persistent Storage</span>
           </div>
         </div>
       </div>
@@ -391,7 +518,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Sign in with Google</h3>
-                <p className="text-xs text-neutral-400">Select or confirm your Google Account</p>
+                <p className="text-xs text-neutral-400">Automatic authentication via Google</p>
               </div>
             </div>
 
@@ -403,7 +530,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
                   value={googleEmail}
                   onChange={(e) => setGoogleEmail(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-xl px-3 py-2 text-xs focus:border-blue-500 outline-none"
-                  placeholder="name@gmail.com"
+                  placeholder="name@company.com"
                 />
               </div>
               <div>
@@ -413,14 +540,51 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
                   value={googleName}
                   onChange={(e) => setGoogleName(e.target.value)}
                   className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-xl px-3 py-2 text-xs focus:border-blue-500 outline-none"
-                  placeholder="Comfort"
+                  placeholder="Your Name"
                 />
               </div>
 
-              {isFirstUser && (
-                <div className="p-2.5 bg-emerald-950/40 border border-emerald-500/40 rounded-xl text-[11px] text-emerald-300 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                  <span>Will be registered as <strong>Primary Super Administrator</strong>.</span>
+              {/* If registering a new Google account after the initial admin, prompt for account type */}
+              {!isFirstUser && (
+                <div className="space-y-2 pt-2 border-t border-neutral-800">
+                  <label className="text-xs text-neutral-300 block font-medium">Account Role in Organization</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGoogleAccountType('DEPARTMENT_HEAD')}
+                      className={`p-2 rounded-lg border text-left text-xs ${
+                        googleAccountType === 'DEPARTMENT_HEAD'
+                          ? 'bg-purple-950 border-purple-500 text-white'
+                          : 'bg-neutral-950 border-neutral-800 text-neutral-400'
+                      }`}
+                    >
+                      Head of Dept
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGoogleAccountType('EMPLOYEE')}
+                      className={`p-2 rounded-lg border text-left text-xs ${
+                        googleAccountType === 'EMPLOYEE'
+                          ? 'bg-blue-950 border-blue-500 text-white'
+                          : 'bg-neutral-950 border-neutral-800 text-neutral-400'
+                      }`}
+                    >
+                      Employee
+                    </button>
+                  </div>
+
+                  <div>
+                    <label className="text-xs text-neutral-400 block mb-1">Department</label>
+                    <select
+                      value={googleDepartment}
+                      onChange={(e) => setGoogleDepartment(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-700 text-white rounded-xl px-3 py-2 text-xs outline-none"
+                    >
+                      {APP_DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
             </div>
@@ -429,7 +593,7 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
               <button
                 type="button"
                 onClick={() => setGoogleModalOpen(false)}
-                className="flex-1 py-2 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl text-xs font-semibold"
+                className="flex-1 py-2 px-3 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded-xl text-xs font-semibold cursor-pointer"
               >
                 Cancel
               </button>
@@ -438,9 +602,9 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
                 id="btn-confirm-google-auth"
                 onClick={() => handleGoogleSignIn(googleEmail, googleName)}
                 disabled={loading}
-                className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold"
+                className="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold cursor-pointer"
               >
-                Continue
+                Continue Automatically
               </button>
             </div>
           </div>
@@ -449,3 +613,4 @@ export const AuthPortal: React.FC<AuthPortalProps> = ({ onSuccess }) => {
     </div>
   );
 };
+

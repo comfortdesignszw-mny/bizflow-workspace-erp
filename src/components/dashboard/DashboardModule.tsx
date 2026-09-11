@@ -255,16 +255,29 @@ export const DashboardModule: React.FC = () => {
     fetchWorkforceTrends();
   }, [currentlyInsideCount, totalEmployees, applicants.length, projects.length]);
 
-  // Telemetry Chart Data (7-Day Trend)
-  const trendData = [
-    { day: 'Mon', onTime: 9, late: 1, totalScans: 28 },
-    { day: 'Tue', onTime: 10, late: 0, totalScans: 32 },
-    { day: 'Wed', onTime: 8, late: 2, totalScans: 30 },
-    { day: 'Thu', onTime: 9, late: 1, totalScans: 29 },
-    { day: 'Fri', onTime: 10, late: 0, totalScans: 31 },
-    { day: 'Sat', onTime: 4, late: 0, totalScans: 12 },
-    { day: 'Today', onTime: onTimeCount, late: todayLateCount, totalScans: accessLogs.length }
-  ];
+  // Telemetry Chart Data (7-Day Trend dynamically calculated)
+  const trendData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const result = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(today.getDate() - i);
+      const dayName = i === 0 ? 'Today' : days[d.getDay()];
+      const dateStr = d.toISOString().split('T')[0];
+      const rollupsForDay = attendanceRollups.filter(r => r.date === dateStr);
+      const onTime = rollupsForDay.filter(r => (r.status === 'ON_TIME' || (r.status as string) === 'Present') && r.lateMinutes <= 0).length;
+      const late = rollupsForDay.filter(r => r.status === 'LATE' || (r.status as string) === 'Late' || r.lateMinutes > 0).length;
+      const totalScans = accessLogs.filter(l => l.timestamp.startsWith(dateStr)).length;
+      result.push({
+        day: dayName,
+        onTime: i === 0 ? onTimeCount : onTime,
+        late: i === 0 ? todayLateCount : late,
+        totalScans: i === 0 ? accessLogs.length : totalScans
+      });
+    }
+    return result;
+  }, [attendanceRollups, accessLogs, onTimeCount, todayLateCount]);
 
   // Department Headcount Data
   const deptData = [

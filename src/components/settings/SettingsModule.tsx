@@ -20,9 +20,17 @@ import {
   Smartphone,
   Sun,
   Moon,
-  Check
+  Check,
+  Crown,
+  Briefcase,
+  Search,
+  Users,
+  UserCheck,
+  Mail,
+  ArrowUpRight
 } from 'lucide-react';
 import { CompanySettings } from '../../types/erp';
+import { APP_DEPARTMENTS } from '../../types/auth';
 
 export const SettingsModule: React.FC = () => {
   const {
@@ -51,11 +59,65 @@ export const SettingsModule: React.FC = () => {
     payrollRuns,
     allUserAccounts,
     setIsPermissionsModalOpen,
-    userAccount
+    userAccount,
+    promoteToAdmin,
+    promoteToDepartmentHead,
+    demoteToEmployee,
+    setEditingUserIdForPermissions
   } = useERP();
 
   const [formSettings, setFormSettings] = useState<CompanySettings>(settings);
   const [saveNotice, setSaveNotice] = useState<string | null>(null);
+
+  // User Directory & Role Promotion States
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'ADMIN' | 'DEPARTMENT_HEAD' | 'MANAGER' | 'EMPLOYEE'>('ALL');
+  const [actionSuccessNotice, setActionSuccessNotice] = useState<string | null>(null);
+  const [deptPickerUserId, setDeptPickerUserId] = useState<string | null>(null);
+
+  const isAdmin = currentUser.role === 'ADMIN' || userAccount?.role === 'ADMIN' || userAccount?.isFirstAdmin;
+
+  const handlePromoteToAdmin = async (userId: string, userName: string) => {
+    const res = await promoteToAdmin(userId);
+    if (res.success) {
+      setActionSuccessNotice(`Elevated ${userName} to Super Administrator.`);
+      setTimeout(() => setActionSuccessNotice(null), 4000);
+    }
+  };
+
+  const handlePromoteToHead = async (userId: string, dept: string, userName: string) => {
+    const res = await promoteToDepartmentHead(userId, dept);
+    if (res.success) {
+      setDeptPickerUserId(null);
+      setActionSuccessNotice(`Promoted ${userName} to Head of ${dept}.`);
+      setTimeout(() => setActionSuccessNotice(null), 4000);
+    }
+  };
+
+  const handleDemoteToStaff = async (userId: string, dept: string, userName: string) => {
+    const res = await demoteToEmployee(userId, dept);
+    if (res.success) {
+      setActionSuccessNotice(`Reassigned ${userName} to Employee.`);
+      setTimeout(() => setActionSuccessNotice(null), 4000);
+    }
+  };
+
+  const handleConfigureUser = (userId: string) => {
+    setEditingUserIdForPermissions(userId);
+    setIsPermissionsModalOpen(true);
+  };
+
+  const filteredUsers = allUserAccounts.filter((u) => {
+    const matchesSearch =
+      u.name.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      u.email.toLowerCase().includes(userSearchQuery.toLowerCase()) ||
+      (u.department && u.department.toLowerCase().includes(userSearchQuery.toLowerCase())) ||
+      (u.roleTitle && u.roleTitle.toLowerCase().includes(userSearchQuery.toLowerCase()));
+
+    if (!matchesSearch) return false;
+    if (userRoleFilter === 'ALL') return true;
+    return u.role === userRoleFilter;
+  });
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
@@ -320,6 +382,294 @@ export const SettingsModule: React.FC = () => {
               {allUserAccounts.filter(u => u.role === 'ADMIN').length}
             </span>
           </div>
+        </div>
+      </div>
+
+      {/* System Detected User Directory & Admin Promotion Center */}
+      <div className="p-6 rounded-2xl bg-neutral-900 border border-neutral-800 space-y-4" id="system-user-directory-card">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-neutral-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl">
+              <Users className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-base flex items-center gap-2">
+                System Detected Users &amp; Promotion Center
+                <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-300 font-semibold">
+                  {allUserAccounts.length} Total
+                </span>
+              </h3>
+              <p className="text-xs text-neutral-400">
+                IndexedDB persistent user registry. Admins can promote any detected user to Super Admin or Department Head.
+              </p>
+            </div>
+          </div>
+
+          {/* Search Bar */}
+          <div className="w-full sm:w-64 relative">
+            <Search className="w-3.5 h-3.5 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+              placeholder="Search user, email, dept..."
+              className="w-full bg-neutral-950 border border-neutral-800 focus:border-blue-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white outline-none"
+            />
+          </div>
+        </div>
+
+        {/* Action feedback banner */}
+        {actionSuccessNotice && (
+          <div className="p-3 bg-emerald-950/60 border border-emerald-500/40 rounded-xl text-xs text-emerald-200 flex items-center gap-2">
+            <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{actionSuccessNotice}</span>
+          </div>
+        )}
+
+        {/* Filter Pills */}
+        <div className="flex flex-wrap gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setUserRoleFilter('ALL')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
+              userRoleFilter === 'ALL'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-neutral-950 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            All Users ({allUserAccounts.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserRoleFilter('ADMIN')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
+              userRoleFilter === 'ADMIN'
+                ? 'bg-amber-600 text-white shadow-sm'
+                : 'bg-neutral-950 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            Admins ({allUserAccounts.filter(u => u.role === 'ADMIN').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserRoleFilter('DEPARTMENT_HEAD')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
+              userRoleFilter === 'DEPARTMENT_HEAD'
+                ? 'bg-purple-600 text-white shadow-sm'
+                : 'bg-neutral-950 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            Dept Heads ({allUserAccounts.filter(u => u.role === 'DEPARTMENT_HEAD').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserRoleFilter('MANAGER')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
+              userRoleFilter === 'MANAGER'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-neutral-950 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            Managers ({allUserAccounts.filter(u => u.role === 'MANAGER').length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setUserRoleFilter('EMPLOYEE')}
+            className={`px-3 py-1.5 rounded-xl font-medium transition-colors cursor-pointer ${
+              userRoleFilter === 'EMPLOYEE'
+                ? 'bg-neutral-700 text-white shadow-sm'
+                : 'bg-neutral-950 border border-neutral-800 text-neutral-400 hover:text-white'
+            }`}
+          >
+            Employees ({allUserAccounts.filter(u => u.role === 'EMPLOYEE').length})
+          </button>
+        </div>
+
+        {/* Users List / Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="border-b border-neutral-800 text-neutral-400 text-[11px] uppercase tracking-wider">
+                <th className="py-2.5 px-3 font-semibold">User Details</th>
+                <th className="py-2.5 px-3 font-semibold">System Role</th>
+                <th className="py-2.5 px-3 font-semibold">Department</th>
+                <th className="py-2.5 px-3 font-semibold">Auth Source</th>
+                <th className="py-2.5 px-3 font-semibold">Status / Last Active</th>
+                <th className="py-2.5 px-3 font-semibold text-right">Admin Promotion Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-800/60">
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-neutral-500 text-xs">
+                    No users matching the search criteria.
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map((u) => {
+                  const isSuperAdmin = u.isFirstAdmin || u.role === 'ADMIN';
+                  const isDeptHead = u.role === 'DEPARTMENT_HEAD';
+                  const isPickerOpen = deptPickerUserId === u.id;
+
+                  return (
+                    <tr key={u.id} className="hover:bg-neutral-800/40 transition-colors">
+                      {/* Name & Avatar */}
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={u.avatar}
+                            alt={u.name}
+                            className="w-9 h-9 rounded-full bg-neutral-800 border border-neutral-700 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <div className="font-bold text-white truncate flex items-center gap-1.5">
+                              {u.name}
+                              {isSuperAdmin && (
+                                <Crown className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                              )}
+                            </div>
+                            <div className="text-[11px] text-neutral-400 truncate flex items-center gap-1">
+                              <Mail className="w-3 h-3 text-neutral-500" />
+                              {u.email}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Role Badge */}
+                      <td className="py-3 px-3">
+                        {isSuperAdmin ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold bg-amber-950/80 text-amber-300 border border-amber-700/60">
+                            <Crown className="w-3 h-3" />
+                            SUPER ADMIN
+                          </span>
+                        ) : isDeptHead ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-950/80 text-purple-300 border border-purple-700/60">
+                            <Shield className="w-3 h-3" />
+                            HEAD OF DEPT
+                          </span>
+                        ) : u.role === 'MANAGER' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-950/80 text-blue-300 border border-blue-700/60">
+                            <Sliders className="w-3 h-3" />
+                            MANAGER
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-medium bg-neutral-800 text-neutral-300 border border-neutral-700">
+                            <Briefcase className="w-3 h-3" />
+                            EMPLOYEE
+                          </span>
+                        )}
+                        <div className="text-[10px] text-neutral-500 mt-0.5 truncate">
+                          {u.roleTitle || 'Standard Staff'}
+                        </div>
+                      </td>
+
+                      {/* Department */}
+                      <td className="py-3 px-3">
+                        <span className="text-neutral-300 font-medium">{u.department || 'General'}</span>
+                      </td>
+
+                      {/* Auth Source */}
+                      <td className="py-3 px-3">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-neutral-950 border border-neutral-800 text-neutral-400">
+                          {u.authProvider}
+                        </span>
+                      </td>
+
+                      {/* Status / Last Active */}
+                      <td className="py-3 px-3 text-neutral-400 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                          <span className="text-neutral-300">Active</span>
+                        </div>
+                        <div className="text-[10px] text-neutral-500">
+                          {new Date(u.lastLoginAt || u.createdAt).toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      {/* Admin Promotion Actions */}
+                      <td className="py-3 px-3 text-right">
+                        {isAdmin && (
+                          <div className="flex items-center justify-end gap-1.5 relative">
+                            {/* Promote to Admin Button (if not already admin) */}
+                            {!isSuperAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handlePromoteToAdmin(u.id, u.name)}
+                                className="px-2 py-1 bg-amber-950/80 hover:bg-amber-900 border border-amber-700 text-amber-200 text-[10px] font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                title="Promote this user to Super Administrator with overall app authority"
+                              >
+                                <Crown className="w-3 h-3 text-amber-400" />
+                                <span>Promote Admin</span>
+                              </button>
+                            )}
+
+                            {/* Promote to Head of Department */}
+                            {!isDeptHead && (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={() => setDeptPickerUserId(isPickerOpen ? null : u.id)}
+                                  className="px-2 py-1 bg-purple-950/80 hover:bg-purple-900 border border-purple-700 text-purple-200 text-[10px] font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
+                                  title="Promote this user to Head of Department"
+                                >
+                                  <Shield className="w-3 h-3 text-purple-400" />
+                                  <span>Promote Head</span>
+                                </button>
+
+                                {/* Department Picker Dropdown */}
+                                {isPickerOpen && (
+                                  <div className="absolute right-0 top-full mt-1 z-30 w-52 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl p-2 space-y-1 text-left">
+                                    <div className="text-[10px] font-bold text-neutral-400 px-2 py-1 uppercase tracking-wider">
+                                      Select Department:
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto space-y-0.5">
+                                      {APP_DEPARTMENTS.map((dept) => (
+                                        <button
+                                          key={dept}
+                                          type="button"
+                                          onClick={() => handlePromoteToHead(u.id, dept, u.name)}
+                                          className="w-full text-left px-2 py-1.5 rounded-lg text-xs text-neutral-200 hover:bg-purple-950/70 hover:text-purple-200 transition-colors truncate"
+                                        >
+                                          {dept}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Reassign / Demote to Employee if currently Admin or Head */}
+                            {(isSuperAdmin || isDeptHead) && !u.isFirstAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => handleDemoteToStaff(u.id, u.department || 'Engineering', u.name)}
+                                className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 text-[10px] font-medium rounded-lg transition-colors cursor-pointer"
+                                title="Reassign to Employee role"
+                              >
+                                Set Employee
+                              </button>
+                            )}
+
+                            {/* Configure granular permissions */}
+                            <button
+                              type="button"
+                              onClick={() => handleConfigureUser(u.id)}
+                              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-neutral-800 transition-colors cursor-pointer"
+                              title="Configure Granular Department Permissions"
+                            >
+                              <Sliders className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

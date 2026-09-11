@@ -19,6 +19,7 @@ import {
   Award
 } from 'lucide-react';
 import { Deal, DealStage, ClientAccount } from '../../types/erp';
+import { EmptyState } from '../common/EmptyState';
 
 export const SalesCRMModule: React.FC = () => {
   const {
@@ -26,6 +27,7 @@ export const SalesCRMModule: React.FC = () => {
     clientAccounts,
     addDeal,
     updateDealStage,
+    addClientAccount,
     currentUser,
     settings
   } = useERP();
@@ -187,129 +189,164 @@ export const SalesCRMModule: React.FC = () => {
 
       {/* TAB 1: KANBAN DEALS PIPELINE */}
       {activeTab === 'pipeline' && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {stages.map(({ stage, label, color }) => {
-            const stageDeals = deals.filter(d => d.stage === stage);
-            const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
+        deals.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+            <EmptyState
+              icon={TrendingUp}
+              title="No Sales Deals in Pipeline"
+              description="Track high-value corporate deals, pipeline deal stages from Lead to Closed Won, and projected contract revenue."
+              actionText="+ Create Deal"
+              onAction={() => setIsAddDealModalOpen(true)}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+            {stages.map(({ stage, label, color }) => {
+              const stageDeals = deals.filter(d => d.stage === stage);
+              const stageSum = stageDeals.reduce((sum, d) => sum + d.value, 0);
 
-            return (
-              <div key={stage} className={`p-4 rounded-2xl border ${color} space-y-3 flex flex-col min-h-[500px]`}>
-                <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
-                  <div>
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">{label}</h3>
-                    <span className="text-[10px] font-mono text-neutral-400">${stageSum.toLocaleString()}</span>
-                  </div>
-                  <span className="w-5 h-5 rounded-full bg-neutral-800 text-neutral-300 text-[10px] font-bold flex items-center justify-center">
-                    {stageDeals.length}
-                  </span>
-                </div>
-
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  {stageDeals.map((deal) => (
-                    <div
-                      key={deal.id}
-                      className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5 shadow-md hover:border-neutral-700 transition-all"
-                    >
-                      <div>
-                        <div className="text-[10px] text-rose-400 font-semibold">{deal.clientCompany}</div>
-                        <h4 className="text-xs font-bold text-white mt-0.5">{deal.title}</h4>
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-white font-bold">${deal.value.toLocaleString()}</span>
-                        <span className="text-[10px] text-neutral-400">{deal.probability}% Prob</span>
-                      </div>
-
-                      <div className="text-[10px] text-neutral-400 border-t border-neutral-800/60 pt-1.5 flex justify-between items-center">
-                        <span>Owner: {(deal.ownerName || 'Staff').split(' ')[0]}</span>
-                        <span>{deal.expectedCloseDate}</span>
-                      </div>
-
-                      {/* Stage transition controls */}
-                      <div className="flex items-center justify-end gap-1 pt-1">
-                        {stage === 'Lead' && (
-                          <button
-                            onClick={() => updateDealStage(deal.id, 'Qualified')}
-                            className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-blue-300 flex items-center gap-1"
-                          >
-                            Qualify <ArrowRight className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                        {stage === 'Qualified' && (
-                          <button
-                            onClick={() => updateDealStage(deal.id, 'Proposal')}
-                            className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-indigo-300 flex items-center gap-1"
-                          >
-                            Proposal <ArrowRight className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                        {stage === 'Proposal' && (
-                          <button
-                            onClick={() => updateDealStage(deal.id, 'Negotiation')}
-                            className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-amber-300 flex items-center gap-1"
-                          >
-                            Negotiate <ArrowRight className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                        {stage === 'Negotiation' && (
-                          <button
-                            onClick={() => updateDealStage(deal.id, 'Won')}
-                            className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-[10px] text-emerald-300 font-bold flex items-center gap-1"
-                          >
-                            Close Won <CheckCircle2 className="w-2.5 h-2.5" />
-                          </button>
-                        )}
-                      </div>
+              return (
+                <div key={stage} className={`p-4 rounded-2xl border ${color} space-y-3 flex flex-col min-h-[500px]`}>
+                  <div className="flex items-center justify-between border-b border-neutral-800/80 pb-2">
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">{label}</h3>
+                      <span className="text-[10px] font-mono text-neutral-400">${stageSum.toLocaleString()}</span>
                     </div>
-                  ))}
+                    <span className="w-5 h-5 rounded-full bg-neutral-800 text-neutral-300 text-[10px] font-bold flex items-center justify-center">
+                      {stageDeals.length}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3 flex-1 overflow-y-auto">
+                    {stageDeals.map((deal) => (
+                      <div
+                        key={deal.id}
+                        className="p-4 rounded-xl bg-neutral-950 border border-neutral-800 space-y-2.5 shadow-md hover:border-neutral-700 transition-all"
+                      >
+                        <div>
+                          <div className="text-[10px] text-rose-400 font-semibold">{deal.clientCompany}</div>
+                          <h4 className="text-xs font-bold text-white mt-0.5">{deal.title}</h4>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs font-mono">
+                          <span className="text-white font-bold">${deal.value.toLocaleString()}</span>
+                          <span className="text-[10px] text-neutral-400">{deal.probability}% Prob</span>
+                        </div>
+
+                        <div className="text-[10px] text-neutral-400 border-t border-neutral-800/60 pt-1.5 flex justify-between items-center">
+                          <span>Owner: {(deal.ownerName || 'Staff').split(' ')[0]}</span>
+                          <span>{deal.expectedCloseDate}</span>
+                        </div>
+
+                        {/* Stage transition controls */}
+                        <div className="flex items-center justify-end gap-1 pt-1">
+                          {stage === 'Lead' && (
+                            <button
+                              onClick={() => updateDealStage(deal.id, 'Qualified')}
+                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-blue-300 flex items-center gap-1 cursor-pointer"
+                            >
+                              Qualify <ArrowRight className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          {stage === 'Qualified' && (
+                            <button
+                              onClick={() => updateDealStage(deal.id, 'Proposal')}
+                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-indigo-300 flex items-center gap-1 cursor-pointer"
+                            >
+                              Proposal <ArrowRight className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          {stage === 'Proposal' && (
+                            <button
+                              onClick={() => updateDealStage(deal.id, 'Negotiation')}
+                              className="px-2 py-1 rounded bg-neutral-800 hover:bg-neutral-700 text-[10px] text-amber-300 flex items-center gap-1 cursor-pointer"
+                            >
+                              Negotiate <ArrowRight className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                          {stage === 'Negotiation' && (
+                            <button
+                              onClick={() => updateDealStage(deal.id, 'Won')}
+                              className="px-2 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-[10px] text-emerald-300 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              Close Won <CheckCircle2 className="w-2.5 h-2.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )
       )}
 
       {/* TAB 2: CLIENT ACCOUNTS */}
       {activeTab === 'accounts' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {clientAccounts.map((acc) => (
-            <div key={acc.id} className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-rose-300 border border-neutral-700">
-                    {acc.tier} • {acc.industry}
-                  </span>
-                  <h3 className="text-base font-bold text-white mt-1.5">{acc.name}</h3>
-                  <p className="text-xs text-neutral-400">Primary Contact: <strong className="text-white">{acc.primaryContact}</strong></p>
+        clientAccounts.length === 0 ? (
+          <div className="p-8 rounded-2xl bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+            <EmptyState
+              icon={Building}
+              title="No Client Accounts Registered"
+              description="Maintain enterprise customer accounts, key account contacts, contracts, and lifetime account valuations."
+              actionText="+ Add Client Account"
+              onAction={() => addClientAccount({
+                name: 'Apex Global Enterprises',
+                industry: 'Cloud Infrastructure',
+                tier: 'Enterprise',
+                annualRevenue: 5000000,
+                primaryContact: currentUser.name,
+                email: currentUser.email,
+                phone: '+1 (555) 304-9201',
+                status: 'Active',
+                openDealsCount: 0,
+                lifetimeValue: 120000
+              })}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {clientAccounts.map((acc) => (
+              <div key={acc.id} className="p-5 rounded-2xl bg-neutral-900/70 border border-neutral-800 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-rose-300 border border-neutral-700">
+                      {acc.tier} • {acc.industry}
+                    </span>
+                    <h3 className="text-base font-bold text-white mt-1.5">{acc.name}</h3>
+                    <p className="text-xs text-neutral-400">Primary Contact: <strong className="text-white">{acc.primaryContact}</strong></p>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      {acc.status}
+                    </span>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    {acc.status}
-                  </span>
-                </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-neutral-800/80">
-                <div className="space-y-1">
-                  <div className="text-neutral-400 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-neutral-500" />
-                    <span>{acc.email}</span>
+                <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-neutral-800/80">
+                  <div className="space-y-1">
+                    <div className="text-neutral-400 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>{acc.email}</span>
+                    </div>
+                    <div className="text-neutral-400 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-neutral-500" />
+                      <span>{acc.phone}</span>
+                    </div>
                   </div>
-                  <div className="text-neutral-400 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-neutral-500" />
-                    <span>{acc.phone}</span>
+                  <div className="text-right">
+                    <span className="text-neutral-500 block text-[11px]">Lifetime Value (LTV)</span>
+                    <span className="font-mono font-bold text-white text-sm">
+                      ${acc.lifetimeValue.toLocaleString()}
+                    </span>
                   </div>
-                </div>
-                <div className="text-right">
-                  <span className="text-neutral-500 block text-[11px]">Lifetime Value (LTV)</span>
-                  <span className="font-mono font-bold text-white text-sm">
-                    ${acc.lifetimeValue.toLocaleString()}
-                  </span>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* MODAL: CREATE DEAL */}

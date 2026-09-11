@@ -29,6 +29,7 @@ import {
   TripLog,
   EngineeringJobCard
 } from '../types/erp';
+import { UserAccount } from '../types/auth';
 
 export interface SyncMetadata {
   key: string;
@@ -67,6 +68,7 @@ export class BizFlowDexieDatabase extends Dexie {
   engineeringJobCards!: Table<EngineeringJobCard, string>;
   settings!: Table<CompanySettings & { id: string }, string>;
   syncMeta!: Table<SyncMetadata, string>;
+  users!: Table<UserAccount, string>;
 
   constructor() {
     super('BizFlowWorkforceERP_IndexedDB');
@@ -101,6 +103,10 @@ export class BizFlowDexieDatabase extends Dexie {
       engineeringJobCards: 'id, jobCode, department, priority, status, raisedBy, syncedToFinanceExpenseId',
       settings: 'id',
       syncMeta: 'key, lastSyncedAt, isDirty'
+    });
+
+    this.version(5).stores({
+      users: 'id, email, role, department, authProvider, createdAt, lastLoginAt'
     });
   }
 }

@@ -14,40 +14,57 @@ import {
   Briefcase
 } from 'lucide-react';
 import { useERP } from '../../context/ERPContext';
-import { UserAccount, DepartmentPermission, DEFAULT_HEAD_PERMISSIONS, DEFAULT_MANAGER_PERMISSIONS, DEFAULT_EMPLOYEE_PERMISSIONS, DEFAULT_ADMIN_PERMISSIONS } from '../../types/auth';
+import {
+  UserAccount,
+  DepartmentPermission,
+  DEFAULT_HEAD_PERMISSIONS,
+  DEFAULT_MANAGER_PERMISSIONS,
+  DEFAULT_EMPLOYEE_PERMISSIONS,
+  DEFAULT_ADMIN_PERMISSIONS,
+  APP_DEPARTMENTS,
+} from '../../types/auth';
 import { UserRole } from '../../types/erp';
 
 interface DepartmentPermissionsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialUserId?: string;
 }
 
-const DEPARTMENTS = [
-  'Engineering',
-  'IT Systems',
-  'Finance & Accounts',
-  'Human Resources',
-  'Procurement & Fleet',
-  'Sales & Business Dev',
-  'Executive Leadership',
-  'Operations & Logistics'
-];
+const DEPARTMENTS = APP_DEPARTMENTS;
 
 export const DepartmentPermissionsModal: React.FC<DepartmentPermissionsModalProps> = ({
   isOpen,
   onClose,
+  initialUserId,
 }) => {
-  const { allUserAccounts, updateUserPermissions, currentUser, userAccount } = useERP();
+  const {
+    allUserAccounts,
+    updateUserPermissions,
+    currentUser,
+    userAccount,
+    promoteToAdmin,
+    promoteToDepartmentHead,
+    demoteToEmployee,
+  } = useERP();
 
   const [selectedUserId, setSelectedUserId] = useState<string>(
-    allUserAccounts[0]?.id || ''
+    initialUserId || allUserAccounts[0]?.id || ''
   );
   const [activeRole, setActiveRole] = useState<UserRole>('DEPARTMENT_HEAD');
   const [roleTitle, setRoleTitle] = useState('Head of Department');
   const [department, setDepartment] = useState('Engineering');
   const [permissions, setPermissions] = useState<DepartmentPermission>({ ...DEFAULT_HEAD_PERMISSIONS });
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Update selected user when initialUserId changes
+  React.useEffect(() => {
+    if (initialUserId) {
+      setSelectedUserId(initialUserId);
+    }
+  }, [initialUserId]);
 
   const selectedUser = allUserAccounts.find(u => u.id === selectedUserId) || allUserAccounts[0];
 
@@ -65,23 +82,54 @@ export const DepartmentPermissionsModal: React.FC<DepartmentPermissionsModalProp
 
   const isAdmin = currentUser.role === 'ADMIN' || userAccount?.role === 'ADMIN';
 
-  const handleApplyPreset = (preset: 'ADMIN' | 'HEAD' | 'MANAGER' | 'STAFF') => {
-    if (preset === 'ADMIN') {
+  const handlePromoteAdmin = async () => {
+    if (!selectedUser) return;
+    const res = await promoteToAdmin(selectedUser.id);
+    if (res.success) {
       setActiveRole('ADMIN');
       setRoleTitle('Super Administrator / System Executive');
       setPermissions({ ...DEFAULT_ADMIN_PERMISSIONS });
-    } else if (preset === 'HEAD') {
+      setActionNotice(`Successfully elevated ${selectedUser.name} to Super Administrator.`);
+      setTimeout(() => setActionNotice(null), 4000);
+    }
+  };
+
+  const handlePromoteHead = async (targetDept: string) => {
+    if (!selectedUser) return;
+    const res = await promoteToDepartmentHead(selectedUser.id, targetDept);
+    if (res.success) {
       setActiveRole('DEPARTMENT_HEAD');
-      setRoleTitle(`Head of ${department}`);
+      setRoleTitle(`Head of ${targetDept}`);
+      setDepartment(targetDept);
       setPermissions({ ...DEFAULT_HEAD_PERMISSIONS });
+      setActionNotice(`Successfully promoted ${selectedUser.name} to Head of ${targetDept}.`);
+      setTimeout(() => setActionNotice(null), 4000);
+    }
+  };
+
+  const handleDemoteToStaff = async () => {
+    if (!selectedUser) return;
+    const res = await demoteToEmployee(selectedUser.id, department);
+    if (res.success) {
+      setActiveRole('EMPLOYEE');
+      setRoleTitle(`${department} Specialist`);
+      setPermissions({ ...DEFAULT_EMPLOYEE_PERMISSIONS });
+      setActionNotice(`Updated ${selectedUser.name} to Employee (${department}).`);
+      setTimeout(() => setActionNotice(null), 4000);
+    }
+  };
+
+  const handleApplyPreset = (preset: 'ADMIN' | 'HEAD' | 'MANAGER' | 'STAFF') => {
+    if (preset === 'ADMIN') {
+      handlePromoteAdmin();
+    } else if (preset === 'HEAD') {
+      handlePromoteHead(department);
     } else if (preset === 'MANAGER') {
       setActiveRole('MANAGER');
       setRoleTitle(`${department} Operations Manager`);
       setPermissions({ ...DEFAULT_MANAGER_PERMISSIONS });
     } else {
-      setActiveRole('EMPLOYEE');
-      setRoleTitle(`${department} Specialist`);
-      setPermissions({ ...DEFAULT_EMPLOYEE_PERMISSIONS });
+      handleDemoteToStaff();
     }
   };
 
@@ -229,27 +277,38 @@ export const DepartmentPermissionsModal: React.FC<DepartmentPermissionsModalProp
                       <button
                         type="button"
                         onClick={() => handleApplyPreset('HEAD')}
-                        className="px-2.5 py-1 bg-purple-950 hover:bg-purple-900 border border-purple-700 text-purple-200 text-[10px] font-bold rounded-lg transition-colors"
+                        className="px-2.5 py-1 bg-purple-950 hover:bg-purple-900 border border-purple-700 text-purple-200 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                        title="Promote to Department Head"
                       >
-                        Set Head
+                        Promote to Head
                       </button>
                       <button
                         type="button"
                         onClick={() => handleApplyPreset('MANAGER')}
-                        className="px-2.5 py-1 bg-blue-950 hover:bg-blue-900 border border-blue-700 text-blue-200 text-[10px] font-bold rounded-lg transition-colors"
+                        className="px-2.5 py-1 bg-blue-950 hover:bg-blue-900 border border-blue-700 text-blue-200 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                        title="Assign Department Manager"
                       >
                         Set Manager
                       </button>
                       <button
                         type="button"
                         onClick={() => handleApplyPreset('ADMIN')}
-                        className="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 border border-amber-700 text-amber-200 text-[10px] font-bold rounded-lg transition-colors"
+                        className="px-2.5 py-1 bg-amber-950 hover:bg-amber-900 border border-amber-700 text-amber-200 text-[10px] font-bold rounded-lg transition-colors cursor-pointer"
+                        title="Elevate to Super Administrator"
                       >
-                        Set Admin
+                        Promote to Admin
                       </button>
                     </div>
                   )}
                 </div>
+
+                {/* Feedback Notification Banner */}
+                {actionNotice && (
+                  <div className="p-3 bg-emerald-950/60 border border-emerald-500/50 rounded-xl text-xs text-emerald-200 flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>{actionNotice}</span>
+                  </div>
+                )}
 
                 {/* Role & Department Designation */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
